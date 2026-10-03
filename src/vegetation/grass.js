@@ -117,7 +117,8 @@ void main() {
   s.trans = 0.55;
   s.wrap = 0.5;
   s.rough = 0.55;
-  s.spec = 0.4;
+  s.spec = (uStyle == 2 || uStyle == 3) ? 0.0 : 0.4;
+  s.rimK = 0.4;
   float sh = sunShadow(vWp, vec3(0.0, 1.0, 0.0), 0.8) * cloudShadow(vWp);
   vec3 col = shade(s, vWp, V, sh);
   col = applyFog(col, vWp);

@@ -158,7 +158,7 @@ void main() {
   alb = mix(alb, alb * vec3(0.62, 0.55, 0.5), mB.r * (1.0 - wCob));
 
   // worn / trampled grass near paths and village
-  float wornAmt = worn * W[0] * 0.55;
+  float wornAmt = worn * W[0] * ((uStyle == 2 || uStyle == 3) ? 0.15 : 0.55);
   alb = mix(alb, alb * vec3(1.25, 1.05, 0.75), wornAmt);
 
   // macro value + hue variation (large soft patches) — kills the last hint of repetition

@@ -34,7 +34,7 @@ vec3 kuwahara(vec2 uv, float radius) {
   vec3 s0 = vec3(0.0), s1 = vec3(0.0), s2 = vec3(0.0), s3 = vec3(0.0);
   int r = int(radius);
   // jitter the kernel orientation with a slow noise field -> brush-stroke flow
-  float a = texture2D(uNoise, uv * 1.7).r * 6.2831 * 0.35;
+  float a = 0.0;
   mat2 R = mat2(cos(a), -sin(a), sin(a), cos(a));
   vec2 ts = texelSize * 1.25;
   float n = 0.0;
@@ -114,10 +114,11 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, const in float depth,
     float cell = 6.0;
     vec2 g = R * px / cell;
     vec2 f = fract(g) - 0.5;
-    float dark = saturate((0.32 - L) / 0.32);
-    float rad = sqrt(dark) * 0.55;
+    float dark = saturate((0.045 - L) / 0.045);
+    float near = 1.0 - smoothstep(60.0, 160.0, d);
+    float rad = sqrt(dark) * 0.5;
     float dotM = 1.0 - smoothstep(rad - 0.08, rad + 0.08, length(f));
-    col = mix(col, col * 0.45, dotM * uFX2.x);
+    col = mix(col, col * 0.5, dotM * uFX2.x * near);
   }
 
   // ---- hatching in shadows (painterly)
@@ -136,7 +137,8 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, const in float depth,
     float a = texture2D(uNoise, uv * 0.6).g * 3.0;
     mat2 R = mat2(cos(a), -sin(a), sin(a), cos(a));
     float st = texture2D(uNoise, R * bp * 0.05).b;
-    col *= 1.0 + (st - 0.5) * 0.22 * uFX2.z;
+    float skyK = 1.0 - smoothstep(1500.0, 6000.0, d) * 0.7;
+    col *= 1.0 + (st - 0.5) * 0.22 * uFX2.z * skyK;
   }
 
   // ---- grading
@@ -200,6 +202,74 @@ class StylizeEffect extends Effect {
   }
 }
 
+// Ray-marched sun scattering through the cascaded shadow maps (light shafts in the haze).
+const volumetricFrag = /* glsl */ `
+uniform sampler2DShadow uShadowMap0;
+uniform sampler2DShadow uShadowMap1;
+uniform mat4 uShadowMat0;
+uniform mat4 uShadowMat1;
+uniform mat4 uProjInv;
+uniform mat4 uCamWorld;
+uniform vec3 uSunDirV;
+uniform vec3 uSunCol;
+uniform vec4 uVol; // x strength, y max distance, z density, w anisotropy
+uniform float uVolFrame;
+
+vec3 viewPos(vec2 uv, float depth) {
+  vec4 ndc = vec4(uv * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
+  vec4 v = uProjInv * ndc;
+  return v.xyz / v.w;
+}
+float shadowAt(vec3 wp) {
+  vec3 c0 = (uShadowMat0 * vec4(wp, 1.0)).xyz;
+  if (c0.x > 0.01 && c0.x < 0.99 && c0.y > 0.01 && c0.y < 0.99 && c0.z < 1.0) return texture(uShadowMap0, vec3(c0.xy, c0.z - 0.0008));
+  vec3 c1 = (uShadowMat1 * vec4(wp, 1.0)).xyz;
+  if (c1.x > 0.0 && c1.x < 1.0 && c1.y > 0.0 && c1.y < 1.0 && c1.z < 1.0) return texture(uShadowMap1, vec3(c1.xy, c1.z - 0.0015));
+  return 1.0;
+}
+void mainImage(const in vec4 inputColor, const in vec2 uv, const in float depth, out vec4 outputColor) {
+  if (uVol.x <= 0.0) { outputColor = inputColor; return; }
+  vec3 vp = viewPos(uv, depth);
+  float dist = min(length(vp), uVol.y);
+  vec3 dirV = normalize(vp);
+  vec3 camW = (uCamWorld * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+  vec3 dirW = normalize((uCamWorld * vec4(dirV, 0.0)).xyz);
+  const int N = 14;
+  float jitter = fract(52.9829189 * fract(dot(gl_FragCoord.xy + uVolFrame * 7.0, vec2(0.06711056, 0.00583715))));
+  float stepL = dist / float(N);
+  float acc = 0.0;
+  for (int i = 0; i < N; i++) {
+    float t = (float(i) + jitter) * stepL;
+    vec3 p = camW + dirW * t;
+    // denser near the ground, thinning with altitude
+    float h = exp(-max(p.y, 0.0) * 0.03);
+    acc += shadowAt(p) * h;
+  }
+  acc /= float(N);
+  float g = uVol.w;
+  float cosT = dot(dirW, uSunDirV);
+  float phase = (1.0 - g * g) / pow(1.0 + g * g - 2.0 * g * cosT, 1.5) * 0.0796;
+  float amount = (1.0 - exp(-dist * uVol.z));
+  vec3 scatter = uSunCol * acc * phase * amount * uVol.x;
+  outputColor = vec4(inputColor.rgb + scatter, inputColor.a);
+}
+`;
+
+class VolumetricEffect extends Effect {
+  constructor() {
+    super('VolumetricEffect', volumetricFrag, {
+      attributes: EffectAttribute.DEPTH,
+      uniforms: new Map([
+        ['uShadowMap0', new THREE.Uniform(null)], ['uShadowMap1', new THREE.Uniform(null)],
+        ['uShadowMat0', new THREE.Uniform(new THREE.Matrix4())], ['uShadowMat1', new THREE.Uniform(new THREE.Matrix4())],
+        ['uProjInv', new THREE.Uniform(new THREE.Matrix4())], ['uCamWorld', new THREE.Uniform(new THREE.Matrix4())],
+        ['uSunDirV', new THREE.Uniform(new THREE.Vector3())], ['uSunCol', new THREE.Uniform(new THREE.Color())],
+        ['uVol', new THREE.Uniform(new THREE.Vector4(0, 140, 0.012, 0.65))], ['uVolFrame', new THREE.Uniform(0)],
+      ]),
+    });
+  }
+}
+
 class ExposureEffect extends Effect {
   constructor() {
     super('ExposureEffect', /* glsl */ `
@@ -233,7 +303,9 @@ export class PostChain {
     });
     this.godrays.blendMode.opacity.value = 0;
     this.tone = new ToneMappingEffect({ mode: ToneMappingMode.AGX });
-    this.hdrPass = new EffectPass(camera, this.exposure, this.godrays, this.bloom, this.tone);
+    this.volumetric = new VolumetricEffect();
+    this.camera = camera;
+    this.hdrPass = new EffectPass(camera, this.volumetric, this.exposure, this.godrays, this.bloom, this.tone);
     this.composer.addPass(this.hdrPass);
 
     this.stylize = new StylizeEffect(noiseTex);
@@ -267,6 +339,7 @@ export class PostChain {
     this.bloom.luminanceMaterial.smoothing = p.bloomSmoothing ?? 0.25;
     this.bloom.mipmapBlurPass.radius = p.bloomRadius ?? 0.72;
     this.godrays.blendMode.opacity.value = p.godrays;
+    this.volumetric.uniforms.get('uVol').value.set(p.volumetric ?? 0, p.volDistance ?? 140, p.volDensity ?? 0.012, 0.62);
     if (this.tone.mode !== p.tone) this.tone.mode = p.tone;
 
     su.get('uMode').value = style.id;
@@ -288,6 +361,16 @@ export class PostChain {
   }
 
   render(dt) {
+    const vu = this.volumetric.uniforms;
+    vu.get('uShadowMap0').value = U.uShadowMap0.value;
+    vu.get('uShadowMap1').value = U.uShadowMap1.value;
+    vu.get('uShadowMat0').value.copy(U.uShadowMat0.value);
+    vu.get('uShadowMat1').value.copy(U.uShadowMat1.value);
+    vu.get('uProjInv').value.copy(this.camera.projectionMatrixInverse);
+    vu.get('uCamWorld').value.copy(this.camera.matrixWorld);
+    vu.get('uSunDirV').value.copy(U.uSunDir.value);
+    vu.get('uSunCol').value.copy(U.uSunColor.value);
+    vu.get('uVolFrame').value = this.frame % 64;
     this.stylize.uniforms.get('uFrame').value = this.frame++ % 1000;
     this.composer.render(dt);
   }

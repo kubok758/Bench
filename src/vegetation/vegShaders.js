@@ -83,7 +83,8 @@ void main() {
   s.trans = 0.6;
   s.wrap = 0.4;
   s.rough = 0.6;
-  s.spec = 0.25;
+  s.spec = (uStyle == 2 || uStyle == 3) ? 0.0 : 0.25;
+  s.rimK = 0.3;
   float ndl = dot(N, uSunDir);
   float sh = sunShadow(vWp, N, abs(ndl)) * cloudShadow(vWp);
   vec3 col = shade(s, vWp, V, sh);
@@ -234,8 +235,8 @@ void main() {
   vec3 N = normalize(vN);
   vec3 V = normalize(cameraPosition - vWp);
   Surf s = surfDefault(alb, N);
-  s.trans = 0.5; s.wrap = 0.5; s.rough = 0.7; s.spec = 0.15;
-  s.ao = 0.85;
+  s.trans = 0.5; s.wrap = 0.5; s.rough = 0.7; s.spec = (uStyle == 2 || uStyle == 3) ? 0.0 : 0.15;
+  s.ao = 0.85; s.rimK = 0.3;
   float sh = sunShadow(vWp, N, 0.5) * cloudShadow(vWp);
   vec3 col = shade(s, vWp, V, sh);
   col = applyFog(col, vWp);

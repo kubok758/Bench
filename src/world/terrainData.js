@@ -434,15 +434,15 @@ function buildMasks(data) {
       const wsd = waterSdf(x, z);
       const vergeV = vergeAt(x, z);
       const tilled = tilledAt(x, z);
-      let f = 0.5 + 0.7 * fbm(n6, x / 230, z / 230, 4) + 0.28 * fbm(n7, x / 64, z / 64, 3);
-      f += 0.42 * smoothstep(105, 170, x);
-      f += 0.36 * smoothstep(-90, -210, z);
+      let f = 0.38 + 0.7 * fbm(n6, x / 230, z / 230, 4) + 0.28 * fbm(n7, x / 64, z / 64, 3);
+      f += 0.26 * smoothstep(105, 170, x);
+      f += 0.24 * smoothstep(-90, -210, z);
       f += 0.3 * smoothstep(-120, -230, x) * smoothstep(-20, 120, z);
       f += 0.25 * smoothstep(-160, -320, x);
       f -= 0.35 * smoothstep(120, 40, Math.abs(x - 10)) * smoothstep(120, 330, z); // southern meadows
       const dv = Math.hypot(x, z);
       f *= smoothstep(92, 165, dv);
-      f *= smoothstep(3, 16, wsd);
+      f *= smoothstep(6, 42, wsd);
       f *= 1 - vergeV * 0.9;
       let flowers = 0;
       for (const c of CLEARINGS) {

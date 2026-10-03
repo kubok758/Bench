@@ -71,7 +71,11 @@ vec3 hsv2rgb(vec3 c) {
 // Style-aware albedo conditioning: flatten detail toward the mean colour, push saturation.
 vec3 styleAlbedo(vec3 detailed, vec3 flatCol) {
   vec3 c = mix(flatCol, detailed, uStyleA.x);
-  c = adjustSat(c, uStyleA.y);
+  // boost colourful surfaces, protect near-greys (stone, cobbles) from turning orange
+  float mx = max(c.r, max(c.g, c.b)), mn = min(c.r, min(c.g, c.b));
+  float chroma = (mx - mn) / max(mx, 1e-4);
+  float k = mix(1.0 + (uStyleA.y - 1.0) * 0.25, uStyleA.y, smoothstep(0.12, 0.45, chroma));
+  c = adjustSat(c, k);
   if (uStyleC.y != 0.0) {
     vec3 h = rgb2hsv(c);
     h.x = fract(h.x + uStyleC.y);
@@ -88,7 +92,8 @@ vec3 grassBase(vec2 xz) {
   float m2 = noiseLo(xz * 0.011 + 0.7);
   vec3 lush = vec3(0.074, 0.150, 0.021);
   vec3 dry = vec3(0.235, 0.215, 0.050);
-  vec3 c = mix(lush, dry, smoothstep(0.5, 0.78, m) * 0.7);
+  float dryK = (uStyle == 2 || uStyle == 3) ? 0.25 : 0.7;
+  vec3 c = mix(lush, dry, smoothstep(0.5, 0.78, m) * dryK);
   c *= 0.85 + 0.3 * m2;
   return c;
 }
@@ -221,6 +226,10 @@ vec3 applyFog(vec3 col, vec3 wp) {
   float ry = dir.y * fh;
   float integ = abs(ry) > 1e-4 ? (1.0 - exp(-dist * ry)) / ry : dist;
   float fogAmt = uFog.x * exp(-camH * fh) * integ;
+  if (uStyle == 4) {
+    vec2 mid = (cameraPosition.xz + wp.xz) * 0.5;
+    fogAmt *= 0.45 + 1.3 * smoothstep(0.3, 0.75, fbmTex(mid * 0.0021 + uTime * 0.0004));
+  }
   float aerial = 1.0 - exp(-dist * uFog.w);
   float t = 1.0 - exp(-fogAmt);
   t = max(t, aerial);
@@ -247,11 +256,12 @@ struct Surf {
   float spec;      // specular amount (0..1)
   float wrap;      // wrapped diffuse
   vec3 emissive;
+  float rimK;      // rim light multiplier (foliage keeps it low)
 };
 
 Surf surfDefault(vec3 albedo, vec3 N) {
   Surf s;
-  s.albedo = albedo; s.N = N; s.rough = 0.8; s.ao = 1.0; s.trans = 0.0; s.spec = 0.5; s.wrap = 0.0; s.emissive = vec3(0.0);
+  s.albedo = albedo; s.N = N; s.rough = 0.8; s.ao = 1.0; s.trans = 0.0; s.spec = 0.5; s.wrap = 0.0; s.emissive = vec3(0.0); s.rimK = 1.0;
   return s;
 }
 
@@ -287,22 +297,27 @@ vec3 shade(Surf s, vec3 wp, vec3 V, float shadow) {
   vec3 sun = uSunColor * uLightTint;
   vec3 col;
   float NoV = saturate(dot(N, V));
-  float rimF = pow(1.0 - NoV, 4.0);
+  float rimF = pow(1.0 - NoV, 4.0) * s.rimK;
   float backLit = saturate(dot(-V, L));
 
   if (uStyle == 1) {
-    // Painterly (Arcane-like): soft bands, cool violet shadows, warm light, hand-painted rim.
+    // Painterly (Arcane-like): soft bands, cool teal/violet shadows, warm key light, painted rim.
     float q = bands(light, uStyleB.x, uStyleB.y);
-    vec3 shadowCol = s.albedo * mix(amb, uShadowTint * (luma(amb) * 1.7 + 0.08), uStyleB.z);
-    vec3 litCol = s.albedo * (sun * 0.95 + amb * 0.55);
+    vec3 coolAmb = mix(amb, uShadowTint * (luma(amb) * 1.9 + 0.06), uStyleB.z);
+    vec3 shadowCol = s.albedo * coolAmb;
+    vec3 litCol = s.albedo * (sun * 1.0 + amb * 0.45);
+    // saturated core shadow right at the terminator, like a painter's transition stroke
+    float core = smoothstep(0.0, 0.25, light) * (1.0 - smoothstep(0.25, 0.6, light));
     col = mix(shadowCol, litCol, q);
-    col += s.albedo * sun * s.trans * 0.6 * pow(backLit, 3.0) * shadow * uStyleC.x;
+    col += s.albedo * vec3(0.9, 0.35, 0.25) * core * 0.18 * luma(sun);
+    col += s.albedo * sun * s.trans * 0.55 * pow(backLit, 3.0) * shadow * uStyleC.x;
     col += uRimColor * rimF * uStyleA.z * (0.35 + 0.65 * saturate(ndlRaw + 0.4)) * s.ao;
   } else if (uStyle == 2) {
     // Anime: crisp two-tone cel with coloured shadow, soft gradient inside the lit side.
-    float q = smoothstep(0.5 - uStyleB.y, 0.5 + uStyleB.y, light + 0.12);
-    vec3 shadowCol = s.albedo * uShadowTint * (0.62 + 0.38 * luma(amb));
-    vec3 litCol = s.albedo * (sun * (0.78 + 0.22 * ndl) + amb * 0.32);
+    float far = smoothstep(150.0, 900.0, length(wp - cameraPosition));
+    float q = smoothstep(0.5 - uStyleB.y - far * 0.35, 0.5 + uStyleB.y + far * 0.35, light + 0.12);
+    vec3 shadowCol = s.albedo * uShadowTint * (0.5 + 0.38 * luma(amb));
+    vec3 litCol = s.albedo * (sun * (0.82 + 0.22 * ndl) + amb * 0.3);
     col = mix(shadowCol, litCol, q);
     col *= mix(1.0, s.ao, 0.55);
     col += s.albedo * sun * s.trans * 0.45 * step(0.6, backLit) * shadow * uStyleC.x;
@@ -311,7 +326,8 @@ vec3 shade(Surf s, vec3 wp, vec3 V, float shadow) {
     col += sun * step(0.985, NoH) * uStyleC.w * s.spec * shadow;
   } else if (uStyle == 3) {
     // Cartoon: hard two tones, flat ambient, bold highlight.
-    float q = step(0.42, light + 0.05);
+    float far = smoothstep(200.0, 1200.0, length(wp - cameraPosition));
+    float q = smoothstep(0.42 - far * 0.3, 0.42 + 0.001 + far * 0.3, light + 0.05);
     vec3 shadowCol = s.albedo * uShadowTint;
     vec3 litCol = s.albedo * sun * 0.62;
     col = mix(shadowCol, litCol, q);

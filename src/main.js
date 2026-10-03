@@ -17,6 +17,7 @@ import { createGrass } from './vegetation/grass.js';
 import { createVillage } from './village/index.js';
 import { createVillagers } from './life/villagers.js';
 import { createAmbient } from './life/ambient.js';
+import { createDetails } from './world/details.js';
 
 const params = new URLSearchParams(location.search);
 const TEST = params.has('test');
@@ -42,7 +43,7 @@ const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r()));
 async function boot() {
   if (!hasWebGL2()) { ui.fail(); return; }
   const container = document.getElementById('app');
-  const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance', stencil: false, depth: true, alpha: false });
+  const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance', stencil: false, depth: true, alpha: false, preserveDrawingBuffer: TEST });
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.NoToneMapping;
   renderer.info.autoReset = false;
@@ -111,6 +112,7 @@ async function boot() {
   // world queries for the camera
   const worldQ = {
     heightAt: (x, z) => data.heightAt(x, z),
+    canopyAt: (x, z) => (Math.abs(x) < WORLD.half && Math.abs(z) < WORLD.half ? data.forestAt(x, z) * 26 : 0),
     groundAt: (x, z) => {
       let h = data.heightAt(x, z);
       for (const s of app.systems) if (s.groundAt) { const g = s.groundAt(x, z); if (g !== null && g > h - 0.6) h = Math.max(h, g); }
@@ -151,6 +153,7 @@ async function boot() {
     ['Growing the forest', async (c) => createTrees(c, await createFoliageAtlas())],
     ['Sowing the meadows', async (c) => createGrass(c)],
     ['Building the village', async (c) => createVillage(c)],
+    ['Placing the stones', async (c) => createDetails(c)],
     ['Waking the villagers', async (c) => createVillagers(c)],
     ['Calling the birds home', async (c) => createAmbient(c, app.systems.find((s) => s.name === 'village'))],
   ];
@@ -247,7 +250,7 @@ async function boot() {
     if (e.code === 'KeyH') ui.toggleHidden();
   });
   controls.onModeChange = (m) => {
-    if (m === 'tour') { ui.touring(); ui.showIntro(false); } else ui.exploring();
+    if (m === 'tour') { ui.touring(); ui.showIntro(false); } else if (m === 'travel') ui.showIntro(false); else ui.exploring();
   };
 
   // ---- precompile every style behind the loader (no hitch on first switch)
@@ -255,11 +258,13 @@ async function boot() {
   const startStyle = Math.min(4, Math.max(0, parseInt(params.get('style') || '1', 10) - 1));
   function renderFrame(dt) {
     renderer.info.reset();
+    const u0 = performance.now();
     U.uTime.value += dt;
     U.uCloud.value.x += dt * 0.0016;
     U.uCloud.value.y += dt * 0.0007;
     controls.update(dt);
     for (const s of app.systems) s.update?.(dt, U.uTime.value, ctx);
+    app.updateMs = performance.now() - u0;
     shadows.update(camera);
     reflection.update(camera);
     sunMesh.position.copy(camera.position).addScaledVector(U.uSunDir.value, 8000);
@@ -279,13 +284,19 @@ async function boot() {
   ui.loaded();
   if (TEST) document.body.classList.add('hide-ui', 'test');
   else setTimeout(() => ui.showIntro(true), 700);
+  const START = { p: [114, 0, -15], t: [40, 0, -6] };
   const enter = () => {
     if (controls.mode !== 'tour') return;
-    controls.setMode('walk');
+    const gy = worldQ.groundAt(START.p[0], START.p[2]);
+    const p = [START.p[0], gy + controls.eye, START.p[2]];
+    const t = [START.t[0], worldQ.groundAt(START.t[0], START.t[2]) + 4.5, START.t[2]];
+    if (TEST) { controls.setMode('walk', { instant: true }); controls.setPose(p, t); }
+    else controls.enterAt(p, t);
     controls.requestLock();
     renderer.domElement.focus();
   };
   ui.onEnter(enter);
+  app.enter = enter;
   renderer.domElement.addEventListener('click', () => { if (controls.mode === 'tour' && document.getElementById('intro').classList.contains('show')) enter(); });
 
   // test hooks
@@ -294,6 +305,17 @@ async function boot() {
     controls.setMode('fly', { instant: true });
     controls.setPose(pos, target);
     controls.vel.set(0, 0, 0);
+  };
+  // downsampled RGB capture of the last frame (test mode keeps the drawing buffer)
+  app.capture = (w = 192, h = 108) => {
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const g = c.getContext('2d', { willReadFrequently: true });
+    g.drawImage(renderer.domElement, 0, 0, w, h);
+    const d = g.getImageData(0, 0, w, h).data;
+    const out = new Array(w * h * 3);
+    for (let i = 0, j = 0; i < d.length; i += 4) { out[j++] = d[i]; out[j++] = d[i + 1]; out[j++] = d[i + 2]; }
+    return { w, h, px: out };
   };
   app.renderInfo = () => ({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, shadowCalls: shadows.stats.calls, reflCalls: reflection.stats.calls });
   app.frames = 0;
@@ -314,6 +336,14 @@ async function boot() {
   else {
     // tests drive frames explicitly for determinism
     app.step = (n = 1, dt = 1 / 30) => { for (let i = 0; i < n; i++) renderFrame(dt); app.frames += n; };
+    // logic-only stepping (no rendering) for behaviour checks
+    app.simulate = (n = 1, dt = 1 / 30) => {
+      for (let i = 0; i < n; i++) {
+        U.uTime.value += dt;
+        controls.update(dt);
+        for (const s of app.systems) s.update?.(dt, U.uTime.value, ctx);
+      }
+    };
     app.startLoop = () => requestAnimationFrame(loop);
   }
   app.isReady = true;

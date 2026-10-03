@@ -163,14 +163,45 @@ export class Controls {
     return catmull(g(i - 1), g(i), g(i + 1), g(i + 2), f, out);
   }
 
+  /** Glide from the current view to a start pose, then hand control to the walker. */
+  enterAt(pos, target, dur = 3.2) {
+    const cam = this.camera;
+    this.travel = {
+      t: 0, dur,
+      p0: cam.position.clone(), q0: cam.quaternion.clone(),
+      p1: new THREE.Vector3(...pos),
+      q1: new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().lookAt(new THREE.Vector3(...pos), new THREE.Vector3(...target), new THREE.Vector3(0, 1, 0))),
+      target,
+    };
+    this.mode = 'travel';
+    this.onModeChange?.('travel', 'tour');
+  }
+
   update(dt) {
     dt = Math.min(dt, 0.1);
     const cam = this.camera;
+    if (this.mode === 'travel') {
+      const tr = this.travel;
+      tr.t += dt / tr.dur;
+      const k = tr.t >= 1 ? 1 : tr.t < 0.5 ? 4 * tr.t ** 3 : 1 - Math.pow(-2 * tr.t + 2, 3) / 2;
+      // arc through the air so the move reads as a deliberate camera flight
+      const lift = Math.sin(Math.PI * k) * Math.min(25, tr.p0.distanceTo(tr.p1) * 0.12);
+      cam.position.lerpVectors(tr.p0, tr.p1, k);
+      cam.position.y += lift;
+      cam.quaternion.slerpQuaternions(tr.q0, tr.q1, Math.min(1, k * 1.15));
+      cam.updateMatrixWorld();
+      if (tr.t >= 1) {
+        this.mode = 'tour';
+        this.setMode('walk', { instant: true });
+        this.setPose([tr.p1.x, tr.p1.y, tr.p1.z], tr.target);
+      }
+      return;
+    }
     if (this.mode === 'tour') {
       this.tourT += dt * this.tourSpeed;
       const p = this._tourPoint(this.tourT, 'p', [0, 0, 0]);
       const t = this._tourPoint(this.tourT + 0.12, 't', [0, 0, 0]);
-      const g = this.world.groundAt(p[0], p[2]) + 4;
+      const g = this.world.groundAt(p[0], p[2]) + 4 + (this.world.canopyAt ? this.world.canopyAt(p[0], p[2]) : 0);
       if (p[1] < g) p[1] = g;
       tmpV.set(p[0], p[1], p[2]);
       if (!this._tourInit) { cam.position.copy(tmpV); this._tourInit = true; }

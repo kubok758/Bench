@@ -146,17 +146,34 @@ function buildGraph(data, worldQ) {
     }
     ends.push(ids[0], ids[ids.length - 1]);
   }
-  // join path ends to the nearest node on another path
+  // join each path end to the nearest node of every other path within 10 m
+  const pathOf = new Int32Array(nodes.length);
+  {
+    let k = 0;
+    PATHS.forEach((p, pi) => { const n = sampleSpline(p.pts, 3).length; for (let i = 0; i < n; i++) pathOf[k++] = pi; });
+  }
+  const link = (a, b) => { if (a !== b && !nodes[a].e.includes(b)) { nodes[a].e.push(b); nodes[b].e.push(a); } };
   for (const id of ends) {
     const a = nodes[id];
-    let best = -1, bd = 25;
+    const best = new Map();
     for (let j = 0; j < nodes.length; j++) {
-      if (j === id || a.e.includes(j)) continue;
+      if (pathOf[j] === pathOf[id]) continue;
       const d = (nodes[j].x - a.x) ** 2 + (nodes[j].z - a.z) ** 2;
-      if (d < bd) { bd = d; best = j; }
+      if (d > 100) continue;
+      const cur = best.get(pathOf[j]);
+      if (!cur || d < cur[1]) best.set(pathOf[j], [j, d]);
     }
-    if (best >= 0) { a.e.push(best); nodes[best].e.push(id); }
+    for (const [j] of best.values()) link(id, j);
   }
+  // the village square is open ground: connect everything on it
+  const plaza = nodes.map((n, i) => [i, Math.hypot(n.x, n.z)]).filter(([, d]) => d < 15).map(([i]) => i);
+  for (let i = 0; i < plaza.length; i++) for (let j = i + 1; j < plaza.length; j++) link(plaza[i], plaza[j]);
+  // connectivity from the square
+  const seen = new Uint8Array(nodes.length);
+  const q = [plaza[0] ?? 0];
+  seen[q[0]] = 1;
+  while (q.length) { const c = q.pop(); for (const nb of nodes[c].e) if (!seen[nb]) { seen[nb] = 1; q.push(nb); } }
+  nodes.forEach((n, i) => { n.reach = !!seen[i]; });
   return nodes;
 }
 
@@ -183,7 +200,7 @@ function route(nodes, from, to) {
 
 function nearestNode(nodes, x, z) {
   let best = 0, bd = Infinity;
-  nodes.forEach((n, i) => { const d = (n.x - x) ** 2 + (n.z - z) ** 2; if (d < bd) { bd = d; best = i; } });
+  nodes.forEach((n, i) => { if (!n.reach) return; const d = (n.x - x) ** 2 + (n.z - z) ** 2; if (d < bd) { bd = d; best = i; } });
   return best;
 }
 
@@ -314,7 +331,7 @@ export function createVillagers(ctx) {
     group,
     agents,
     nodes,
-    stats: { villagers: agents.length, walkers: agents.filter((a) => a.kind === 'walker').length },
+    stats: { villagers: agents.length, walkers: agents.filter((a) => a.kind === 'walker').length, graphNodes: nodes.length, unreachable: nodes.filter((n) => !n.reach).length },
     update(dt, time, c) {
       frame++;
       camPos.copy(c.camera.position);
@@ -337,7 +354,7 @@ export function createVillagers(ctx) {
           const dist = tmp.length();
           if (dist < 1.2) {
             a.ri++;
-            if (a.ri >= a.route.length) { a.mode = 'idle'; a.idle = 4 + rand() * 12; a.gesture = rand() < 0.4 ? 0.6 : 0; }
+            if (a.ri >= a.route.length) { a.mode = 'idle'; a.idle = 2.5 + rand() * 7; a.gesture = rand() < 0.4 ? 0.6 : 0; }
           } else {
             const want = Math.atan2(tmp.x, tmp.y);
             let dh = want - a.heading;

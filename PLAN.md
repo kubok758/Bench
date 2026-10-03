@@ -72,3 +72,17 @@ Contract revision: 1.
 - Content pass: forest balance 73% → 57% with 33% open meadows (measured); rocks, standing stones, logs, stumps,
   mushrooms, reeds, lily pads added; villager path graph fully connected (0 unreachable nodes, 12/14 walking).
 - Pages pipeline proven early: gh-pages branch push enabled GitHub Pages automatically.
+- Refinement pass 2 (density, detail, motion): hedgerows with the odd oak along roads and lanes beyond the
+  village, copses in open country; dithered crossfade between tree LODs (no popping); standing stones rebuilt as
+  tall tapered menhirs; villager faces get socket and under-nose shading; churchyard wall colliders; adaptive
+  quality level (AO off, grass ×0.55) when the resolution floor is not enough. Inspection (pass2 sheets, every
+  style): painterly sky and meadows show concentric swirls and square Kuwahara blocks; cartoon mountains and
+  square break into camouflage blotches; Ultra valley views are washed out toward the sun; a tree crown fills the
+  tour's opening frame.
+- Refinement pass 3 (style consistency): polar 8-sector Kuwahara (round strokes); brush strokes from two fixed
+  orientations blended by a slow field (the swirls came from rotating absolute screen coordinates); volumetric
+  march stops 2 m short of surfaces, uses white-noise jitter (the ordered dither drew diagonal streaks — confirmed
+  by toggling it in a diagnostic render) and a realistic haze density (0.004–0.0045 /m instead of 0.012–0.014);
+  cartoon posterises value only with soft steps that fade out by 380 m, ground macro variation scaled to 30 %,
+  drawn cobbles (grey stones, dark joints) in the cel styles, no violet sky sheen on wet banks; tour start kept
+  clear of trees.

@@ -162,13 +162,15 @@ void main() {
   alb = mix(alb, alb * vec3(1.25, 1.05, 0.75), wornAmt);
 
   // macro value + hue variation (large soft patches) — kills the last hint of repetition
+  // (the flat cartoon look keeps only a hint, or its posterised values break into blotches)
+  float macroK = uStyle == 3 ? 0.3 : (uStyle == 2 ? 0.65 : 1.0);
   float nPatch = noiseLo(xz * 0.0019 + 0.71);
-  alb *= 0.78 + 0.42 * nMacro;
-  alb = mix(alb, alb * vec3(1.18, 1.08, 0.72), smoothstep(0.55, 0.8, nPatch) * W[0] * 0.6);
-  alb = mix(alb, alb * vec3(0.8, 0.95, 0.85), smoothstep(0.45, 0.2, nPatch) * W[0] * 0.5);
+  alb *= mix(1.0, 0.78 + 0.42 * nMacro, macroK);
+  alb = mix(alb, alb * vec3(1.18, 1.08, 0.72), smoothstep(0.55, 0.8, nPatch) * W[0] * 0.6 * macroK);
+  alb = mix(alb, alb * vec3(0.8, 0.95, 0.85), smoothstep(0.45, 0.2, nPatch) * W[0] * 0.5 * macroK);
   // tussocks and mown/grazed patches in the meadows (mid scale)
   float tuss = noise4(xz * 0.045 + 0.3).g;
-  alb *= mix(1.0, 0.82 + 0.3 * tuss, W[0] * 0.7);
+  alb *= mix(1.0, 0.82 + 0.3 * tuss, W[0] * 0.7 * macroK);
   // meadow flowers seen from afar warm the grass a little
   alb = mix(alb, alb * vec3(1.15, 1.05, 1.05) + vec3(0.012, 0.008, 0.01), mA.a * 0.5);
 
@@ -176,7 +178,8 @@ void main() {
   // wet banks
   float wet = 1.0 - smoothstep(WL + 0.05, WL + 0.9, wp.y);
   alb *= mix(1.0, 0.62, wet);
-  rough = mix(rough, 0.25, wet * 0.8);
+  // glossy mud only in the lit styles: in the cel styles the sky sheen turns violet
+  if (uStyle == 0 || uStyle == 4) rough = mix(rough, 0.25, wet * 0.8);
   // underwater tint
   float under = smoothstep(WL, WL - 0.6, wp.y);
   alb = mix(alb, alb * vec3(0.55, 0.72, 0.62), under);

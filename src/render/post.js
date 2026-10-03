@@ -227,21 +227,23 @@ vec3 viewPos(vec2 uv, float depth) {
 }
 float shadowAt(vec3 wp) {
   vec3 c0 = (uShadowMat0 * vec4(wp, 1.0)).xyz;
-  if (c0.x > 0.01 && c0.x < 0.99 && c0.y > 0.01 && c0.y < 0.99 && c0.z < 1.0) return texture(uShadowMap0, vec3(c0.xy, c0.z - 0.0008));
+  if (c0.x > 0.01 && c0.x < 0.99 && c0.y > 0.01 && c0.y < 0.99 && c0.z < 1.0) return texture(uShadowMap0, vec3(c0.xy, c0.z - 0.003));
   vec3 c1 = (uShadowMat1 * vec4(wp, 1.0)).xyz;
-  if (c1.x > 0.0 && c1.x < 1.0 && c1.y > 0.0 && c1.y < 1.0 && c1.z < 1.0) return texture(uShadowMap1, vec3(c1.xy, c1.z - 0.0015));
+  if (c1.x > 0.0 && c1.x < 1.0 && c1.y > 0.0 && c1.y < 1.0 && c1.z < 1.0) return texture(uShadowMap1, vec3(c1.xy, c1.z - 0.004));
   return 1.0;
 }
 void mainImage(const in vec4 inputColor, const in vec2 uv, const in float depth, out vec4 outputColor) {
   if (uVol.x <= 0.0) { outputColor = inputColor; return; }
   vec3 vp = viewPos(uv, depth);
   float dist = min(length(vp), uVol.y);
+  // stop short of the surface itself: samples on it self-shadow into moire stripes
+  float marchL = max(min(dist, length(vp) - 2.0) , 0.0);
   vec3 dirV = normalize(vp);
   vec3 camW = (uCamWorld * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
   vec3 dirW = normalize((uCamWorld * vec4(dirV, 0.0)).xyz);
   const int N = 14;
   float jitter = fract(52.9829189 * fract(dot(gl_FragCoord.xy + uVolFrame * 7.0, vec2(0.06711056, 0.00583715))));
-  float stepL = dist / float(N);
+  float stepL = marchL / float(N);
   float acc = 0.0;
   for (int i = 0; i < N; i++) {
     float t = (float(i) + jitter) * stepL;

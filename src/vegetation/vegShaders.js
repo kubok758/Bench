@@ -12,6 +12,7 @@ varying vec2 vUv;
 varying float vAo;
 varying vec4 vInst;
 varying float vH;
+varying float vLodD;
 uniform float uTreeH;
 void main() {
   mat4 im = mat4(1.0);
@@ -40,7 +41,23 @@ void main() {
   vAo = aVeg.w;
   vInst = aInst;
   vH = h;
+  vLodD = distance(origin.xz, cameraPosition.xz);
   gl_Position = projectionMatrix * viewMatrix * vec4(wp, 1.0);
+}
+`;
+
+const lodFade = /* glsl */ `
+uniform vec4 uLodParams; // L0, band0, L1, band1
+uniform float uLod;      // 0 near mesh, 1 far mesh, 2 impostor
+uniform float uLodFar;   // fade-out distance of the far mesh (L1 for trees, bush range for bushes)
+varying float vLodD;
+bool lodDiscard() {
+  float dith = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
+  float f0 = smoothstep(uLodParams.x - uLodParams.y, uLodParams.x, vLodD);
+  float f1 = smoothstep(uLodFar - uLodParams.w, uLodFar, vLodD);
+  if (uLod < 0.5) return dith < f0;
+  if (uLod < 1.5) return dith >= f0 || dith < f1;
+  return dith >= f1;
 }
 `;
 
@@ -54,6 +71,7 @@ uniform sampler2D uAtlas;
 uniform vec3 uLeafTint;
 uniform vec3 uLeafFlat;
 uniform float uAlphaRef;
+${lodFade}
 varying vec3 vWp;
 varying vec3 vN;
 varying vec2 vUv;
@@ -63,6 +81,7 @@ varying float vH;
 
 void main() {
   ${clipWater}
+  if (lodDiscard()) discard;
   vec4 tex = texture(uAtlas, vUv);
   // keep foliage coverage stable under minification
   vec2 tsz = vec2(textureSize(uAtlas, 0));
@@ -102,6 +121,7 @@ uniform sampler2D uBarkC;
 uniform sampler2D uBarkN;
 uniform int uBarkKind; // 0 brown, 1 pine, 2 birch
 uniform vec3 uBarkFlat;
+${lodFade}
 varying vec3 vWp;
 varying vec3 vN;
 varying vec2 vUv;
@@ -121,6 +141,7 @@ vec3 perturb(vec3 N, vec3 p, vec2 uv, vec3 tn) {
 
 void main() {
   ${clipWater}
+  if (lodDiscard()) discard;
   vec2 uv = vUv * vec2(1.0, 1.0);
   vec3 N = normalize(vN);
   vec3 alb;
@@ -186,6 +207,7 @@ varying vec2 vUv;
 varying vec3 vN;
 varying vec4 vInst;
 varying float vCell;
+varying float vLodD;
 void main() {
   mat4 im = mat4(1.0);
 #ifdef USE_INSTANCING
@@ -208,6 +230,7 @@ void main() {
   vUv = (cr + vec2(position.x + 0.5, position.y)) / uCells;
   vInst = aInst;
   vCell = cell;
+  vLodD = distance(origin.xz, cameraPosition.xz);
   gl_Position = projectionMatrix * viewMatrix * vec4(wp, 1.0);
 }
 `;
@@ -219,6 +242,7 @@ ${fogPars}
 ${lightingPars}
 uniform sampler2D uImpAtlas;
 uniform vec3 uLeafTint;
+${lodFade}
 varying vec3 vWp;
 varying vec2 vUv;
 varying vec3 vN;
@@ -226,6 +250,7 @@ varying vec4 vInst;
 varying float vCell;
 void main() {
   ${clipWater}
+  if (lodDiscard()) discard;
   vec4 tex = texture(uImpAtlas, vUv);
   float a = (tex.a - 0.5) / max(fwidth(tex.a), 1e-4) + 0.5;
   if (a < 0.5) discard;

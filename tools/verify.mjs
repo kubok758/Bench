@@ -52,7 +52,9 @@ async function open(page, base, { test = true, style = 1 } = {}) {
   const u = new URL(base);
   if (test) { u.searchParams.set('test', '1'); u.searchParams.set('style', String(style)); }
   await page.goto(u.toString(), { waitUntil: 'load', timeout: 900000 });
-  await page.waitForFunction(() => window.__app && (window.__app.isReady || window.__app.error), null, { timeout: 900000, polling: 500 });
+  const pageErr = new Promise((_, rej) => page.once('pageerror', (e) => rej(new Error(`pageerror: ${e.message}`))));
+  pageErr.catch(() => {});
+  await Promise.race([pageErr, page.waitForFunction(() => window.__app && (window.__app.isReady || window.__app.error), null, { timeout: 900000, polling: 500 })]);
   const err = await page.evaluate(() => window.__app.error || null);
   if (err) throw new Error(`app error: ${err}`);
 }
@@ -239,12 +241,18 @@ async function main() {
       });
       await page.evaluate(() => window.__app.simulate(10, 1 / 30));
       res.yawChange = +(await page.evaluate((y0) => window.__app.controls.yaw - y0, yaw0)).toFixed(3);
-      // collision: walk into the chapel wall
-      await page.evaluate(() => { const app = window.__app; const g = app.ctx.worldQ.groundAt(-14, -55); app.controls.setPose([-14, g + 1.68, -52], [-14, g + 1.6, -80]); app.controls.vel.set(0, 0, 0); });
+      // collision: from inside the churchyard, walk west into the nave's east wall (x = -14 + 3.8)
+      await page.evaluate(() => { const app = window.__app; const g = app.ctx.worldQ.groundAt(-5, -76); app.controls.setPose([-5, g + 1.68, -76], [-40, g + 1.6, -76]); app.controls.vel.set(0, 0, 0); });
       await page.keyboard.down('KeyW');
       await page.evaluate(() => window.__app.simulate(120, 1 / 30));
       await page.keyboard.up('KeyW');
-      res.chapelStopZ = +(await page.evaluate(() => window.__app.ctx.camera.position.z)).toFixed(2);
+      res.chapelStopX = +(await page.evaluate(() => window.__app.ctx.camera.position.x)).toFixed(2);
+      // and the churchyard wall stops you from the outside (east side, wall at x ≈ -14 + 12.75)
+      await page.evaluate(() => { const app = window.__app; const g = app.ctx.worldQ.groundAt(8, -74); app.controls.setPose([8, g + 1.68, -74], [-40, g + 1.6, -74]); app.controls.vel.set(0, 0, 0); });
+      await page.keyboard.down('KeyW');
+      await page.evaluate(() => window.__app.simulate(90, 1 / 30));
+      await page.keyboard.up('KeyW');
+      res.wallStopX = +(await page.evaluate(() => window.__app.ctx.camera.position.x)).toFixed(2);
       // fly mode toggle and climb
       await page.keyboard.press('KeyF');
       res.mode = await page.evaluate(() => window.__app.controls.mode);
@@ -258,7 +266,8 @@ async function main() {
       if (res.walked2s < 4) fail('walking with W did not move the camera far enough');
       if (res.eyeHeight < 1.3 || res.eyeHeight > 2.1) fail('camera not kept at eye height above ground');
       if (Math.abs(res.yawChange) < 0.2) fail('mouse look did not turn the camera');
-      if (res.chapelStopZ < -64) fail('walked through the chapel');
+      if (!(res.chapelStopX > -10.6 && res.chapelStopX < -9.0)) fail(`did not stop at the chapel wall (x=${res.chapelStopX})`);
+      if (!(res.wallStopX > -2.0 && res.wallStopX < 1.5)) fail(`did not stop at the churchyard wall (x=${res.wallStopX})`);
       if (res.mode !== 'fly' || res.climb < 3) fail('fly mode toggle/climb failed');
       if (!process.exitCode) console.log('CONTROLS OK');
     } else if (cmd === 'perf') {

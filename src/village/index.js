@@ -41,7 +41,7 @@ export async function createVillage(ctx) {
     colliders.push(r.collider);
   });
   const chapel = buildChapel(B, data);
-  colliders.push(chapel.collider);
+  colliders.push(chapel.collider, ...chapel.wallColliders);
   const mill = buildWindmill(B, data);
   colliders.push(mill.collider);
   const well = buildWell(B, data);

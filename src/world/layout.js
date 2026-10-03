@@ -136,7 +136,7 @@ export const HOUSES = [
 // Points of interest used by the cinematic tour and villagers' idle spots.
 export const TOUR = [
   // [camPos(x,y,z), lookAt(x,y,z)]
-  { p: [250, 58, 250], t: [40, 8, -10] },
+  { p: [140, 24, 90], t: [-40, 14, -30] },
   { p: [170, 30, 150], t: [10, 10, -10] },
   { p: [110, 16, 40], t: [0, 12, -20] },
   { p: [60, 12, -2], t: [-10, 10, -10] },

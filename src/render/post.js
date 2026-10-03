@@ -6,7 +6,14 @@ import {
 import { N8AOPostPass } from 'n8ao';
 import { U } from './uniforms.js';
 
+// 8 sectors x 3 rays for the polar Kuwahara, precomputed
+const KDIR = Array.from({ length: 24 }, (_, i) => {
+  const a = Math.floor(i / 3) * Math.PI / 4 + ((i % 3) - 1) * 0.3;
+  return `vec2(${Math.cos(a).toFixed(5)}, ${Math.sin(a).toFixed(5)})`;
+}).join(', ');
+
 const stylizeFrag = /* glsl */ `
+const vec2 KDIR[24] = vec2[24](${KDIR});
 uniform int uMode;
 uniform vec4 uOutline;      // x width px, y strength, z silhouette threshold, w fade distance
 uniform vec3 uOutlineColor;
@@ -29,41 +36,28 @@ float viewDist(vec2 uv) {
   return -getViewZ(d);
 }
 
+// Generalised (8-sector, polar) Kuwahara: round, stroke-like cells instead of the
+// square blocks of the classic 4-quadrant filter. Each sector shares the centre tap.
 vec3 kuwahara(vec2 uv, float radius) {
-  vec3 m0 = vec3(0.0), m1 = vec3(0.0), m2 = vec3(0.0), m3 = vec3(0.0);
-  vec3 s0 = vec3(0.0), s1 = vec3(0.0), s2 = vec3(0.0), s3 = vec3(0.0);
-  int r = int(radius);
-  // jitter the kernel orientation with a slow noise field -> brush-stroke flow
-  float a = 0.0;
-  mat2 R = mat2(cos(a), -sin(a), sin(a), cos(a));
-  vec2 ts = texelSize * 1.25;
-  float n = 0.0;
-  for (int j = 0; j <= 6; j++) {
-    if (j > r) break;
-    for (int i = 0; i <= 6; i++) {
-      if (i > r) break;
-      vec2 o = R * vec2(float(i), float(j)) * ts;
-      vec2 o2 = R * vec2(float(i), -float(j)) * ts;
-      vec3 c0 = texture2D(inputBuffer, uv - o).rgb;
-      vec3 c1 = texture2D(inputBuffer, uv + o2).rgb;
-      vec3 c2 = texture2D(inputBuffer, uv - o2).rgb;
-      vec3 c3 = texture2D(inputBuffer, uv + o).rgb;
-      m0 += c0; s0 += c0 * c0;
-      m1 += c1; s1 += c1 * c1;
-      m2 += c2; s2 += c2 * c2;
-      m3 += c3; s3 += c3 * c3;
-      n += 1.0;
+  vec3 c0 = texture2D(inputBuffer, uv).rgb;
+  vec3 acc = vec3(0.0);
+  float wsum = 0.0;
+  vec2 ts = texelSize * radius * 1.3;
+  for (int k = 0; k < 8; k++) {
+    vec3 m = c0, s = c0 * c0;
+    for (int j = 0; j < 3; j++) {
+      vec2 dir = KDIR[k * 3 + j] * ts;
+      vec3 c1 = texture2D(inputBuffer, uv + dir * 0.5).rgb;
+      vec3 c2 = texture2D(inputBuffer, uv + dir).rgb;
+      m += c1 + c2; s += c1 * c1 + c2 * c2;
     }
+    m /= 7.0; s /= 7.0;
+    vec3 v = abs(s - m * m);
+    float q = (v.r + v.g + v.b) * 40.0;
+    float w = 1.0 / (1e-4 + q * q * q * q);
+    acc += m * w; wsum += w;
   }
-  m0 /= n; m1 /= n; m2 /= n; m3 /= n;
-  vec3 v0 = abs(s0 / n - m0 * m0), v1 = abs(s1 / n - m1 * m1), v2 = abs(s2 / n - m2 * m2), v3 = abs(s3 / n - m3 * m3);
-  float q0 = v0.r + v0.g + v0.b, q1 = v1.r + v1.g + v1.b, q2 = v2.r + v2.g + v2.b, q3 = v3.r + v3.g + v3.b;
-  // soft selection (weights ~ 1/var^k) avoids blocky artefacts
-  float w0 = 1.0 / (1e-5 + pow(q0 * 40.0, 4.0));
-  float w1 = 1.0 / (1e-5 + pow(q1 * 40.0, 4.0));
-  float w2 = 1.0 / (1e-5 + pow(q2 * 40.0, 4.0));
-  float w3 = 1.0 / (1e-5 + pow(q3 * 40.0, 4.0));
-  return (m0 * w0 + m1 * w1 + m2 * w2 + m3 * w3) / (w0 + w1 + w2 + w3);
+  return acc / wsum;
 }
 
 void mainImage(const in vec4 inputColor, const in vec2 uv, const in float depth, out vec4 outputColor) {
@@ -131,14 +125,17 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, const in float depth,
     col = mix(col, col * vec3(0.55, 0.5, 0.75), h * uFX2.y);
   }
 
-  // ---- brush-stroke value modulation (painterly)
+  // ---- brush-stroke value modulation (painterly): two families of short directional
+  // strokes in fixed orientations, blended by a slow field (no swirling coordinates)
   if (uFX2.z > 0.0) {
-    vec2 bp = px / vec2(46.0, 13.0);
-    float a = texture2D(uNoise, uv * 0.6).g * 3.0;
-    mat2 R = mat2(cos(a), -sin(a), sin(a), cos(a));
-    float st = texture2D(uNoise, R * bp * 0.05).b;
-    float skyK = 1.0 - smoothstep(1500.0, 6000.0, d) * 0.7;
-    col *= 1.0 + (st - 0.5) * 0.22 * uFX2.z * skyK;
+    vec2 b1 = mat2(0.94, -0.34, 0.34, 0.94) * px;
+    vec2 b2 = mat2(0.77, 0.64, -0.64, 0.77) * px;
+    float st1 = texture2D(uNoise, b1 / vec2(1800.0, 320.0)).a;
+    float st2 = texture2D(uNoise, b2 / vec2(1700.0, 300.0) + 0.37).a;
+    float sel = smoothstep(0.38, 0.62, texture2D(uNoise, uv * 0.7 + 0.13).g);
+    float st = mix(st1, st2, sel);
+    float skyK = 1.0 - smoothstep(1500.0, 6000.0, d) * 0.75;
+    col *= 1.0 + (st - 0.5) * 0.24 * uFX2.z * skyK;
   }
 
   // ---- grading
@@ -150,17 +147,25 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, const in float depth,
   // contrast in a perceptual-ish space
   vec3 g = pow(max(col, 0.0), vec3(1.0 / 2.2));
   g = (g - 0.5) * uGrade.x + 0.5;
-  if (uGrade.w > 0.5) g = floor(g * uGrade.w + 0.5) / uGrade.w;
+  if (uGrade.w > 0.5) {
+    // value-only posterisation with soft steps: flat cartoon plateaus without hue shifts,
+    // fading out with distance so far hills stay clean
+    float Lg = max(dot(g, vec3(0.2126, 0.7152, 0.0722)), 1e-3);
+    float x = Lg * uGrade.w;
+    float q = (floor(x) + smoothstep(0.4, 0.6, fract(x))) / uGrade.w;
+    float fade = 1.0 - smoothstep(160.0, 380.0, d);
+    g *= mix(1.0, clamp(q / Lg, 0.7, 1.4), fade);
+  }
   col = pow(max(g, 0.0), vec3(2.2));
   float l3 = lum(col);
   col = max(mix(vec3(l3), col, uGrade.y), 0.0);
 
   // ---- paper / canvas grain
   if (uFX.w > 0.0) {
-    float p1 = texture2D(uNoise, px / 210.0).a;
-    float p2 = texture2D(uNoise, px / 37.0).b;
+    float p1 = texture2D(uNoise, px / 900.0).a;
+    float p2 = texture2D(uNoise, px / 260.0 + 0.5).a;
     float weave = sin(px.x * 1.9) * sin(px.y * 1.9) * 0.5 + 0.5;
-    col *= 1.0 + ((p1 - 0.5) * 0.18 + (p2 - 0.5) * 0.12 + (weave - 0.5) * 0.05) * uFX.w;
+    col *= 1.0 + ((p1 - 0.5) * 0.1 + (p2 - 0.5) * 0.12 + (weave - 0.5) * 0.06) * uFX.w;
   }
 
   // ---- vignette + grain
@@ -339,7 +344,7 @@ export class PostChain {
     this.bloom.luminanceMaterial.smoothing = p.bloomSmoothing ?? 0.25;
     this.bloom.mipmapBlurPass.radius = p.bloomRadius ?? 0.72;
     this.godrays.blendMode.opacity.value = p.godrays;
-    this.volumetric.uniforms.get('uVol').value.set(p.volumetric ?? 0, p.volDistance ?? 140, p.volDensity ?? 0.012, 0.62);
+    this.volumetric.uniforms.get('uVol').value.set(p.volumetric ?? 0, p.volDistance ?? 140, p.volDensity ?? 0.012, p.volG ?? 0.55);
     if (this.tone.mode !== p.tone) this.tone.mode = p.tone;
 
     su.get('uMode').value = style.id;

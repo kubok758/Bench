@@ -487,8 +487,13 @@ export function createGrass(ctx) {
       for (const f of fields) f.material.uniforms.uCenter.value.copy(c.camera.position);
       wheat.visible = c.camera.position.distanceTo(new THREE.Vector3(-90, 20, 20)) < 420;
     },
+    applyPerf(level) {
+      this._perf = level;
+      if (this._style) this.applyStyle(this._style);
+    },
     applyStyle(style) {
-      const k = style.quality.grass;
+      this._style = style;
+      const k = style.quality.grass * (this._perf ? 0.55 : 1);
       for (const f of [near, mid, far]) f.count = Math.round(f.userData.maxCount * Math.min(1, k / 1.5));
       // cartoon & anime: fewer, chunkier blades read better with outlines
       const toon = style.id === 2 || style.id === 3;

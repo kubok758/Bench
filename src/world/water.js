@@ -168,11 +168,18 @@ export function createWater(data) {
     vmap[k] = positions.length / 3 - 1;
     return vmap[k];
   };
+  const chunkSize = 80;
+  const chunks = new Map();
   for (let j = 0; j < n; j++) {
     for (let i = 0; i < n; i++) {
       const x = -half + (i + 0.5) * step, z = -half + (j + 0.5) * step;
       // cheap reject far from the river corridor
       if (waterSdf(x, z) > 3.5) continue;
+      const ck = `${Math.floor(x / chunkSize)},${Math.floor(z / chunkSize)}`;
+      let cb = chunks.get(ck);
+      if (!cb) chunks.set(ck, (cb = new THREE.Box3(new THREE.Vector3(Infinity, WORLD.waterLevel - 0.5, Infinity), new THREE.Vector3(-Infinity, WORLD.waterLevel + 0.5, -Infinity))));
+      cb.min.x = Math.min(cb.min.x, x - step); cb.min.z = Math.min(cb.min.z, z - step);
+      cb.max.x = Math.max(cb.max.x, x + step); cb.max.z = Math.max(cb.max.z, z + step);
       const a = getV(i, j), b = getV(i + 1, j), c = getV(i, j + 1), d = getV(i + 1, j + 1);
       index.push(a, c, b, b, c, d);
     }
@@ -210,6 +217,7 @@ export function createWater(data) {
   mesh.layers.set(REFLECT_LAYER);
   mesh.renderOrder = 60;
   mesh.frustumCulled = false;
+  mesh.userData.chunks = [...chunks.values()];
   return mesh;
 }
 
@@ -243,7 +251,14 @@ export class Reflection {
     // skip when no water is in view
     this._m.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
     this.frustum.setFromProjectionMatrix(this._m);
-    if (!this.frustum.intersectsBox(this.water.geometry.boundingBox)) { u.uReflOn.value = 0; return; }
+    const cp = camera.position;
+    let visible = false;
+    for (const b of this.water.userData.chunks) {
+      if (b.distanceToPoint(cp) > 520) continue;
+      if (this.frustum.intersectsBox(b)) { visible = true; break; }
+    }
+    this.active = visible;
+    if (!visible) { u.uReflOn.value = 0; return; }
     const WL = WORLD.waterLevel;
     const cam = this.cam;
     cam.copy(camera, false);

@@ -125,6 +125,7 @@ export function buildChapel(B, data) {
   // churchyard: low wall + a few headstones
   const rand = mulberry32(31);
   const wallPts = [];
+  const wallColliders = [];
   const R = 15;
   for (let a = 0; a <= 64; a++) {
     const ang = (a / 64) * Math.PI * 2;
@@ -138,6 +139,7 @@ export function buildChapel(B, data) {
     const len = Math.hypot(bx - ax, bz - az);
     B.tint = [0.85 + rand() * 0.1, 0.83 + rand() * 0.1, 0.8 + rand() * 0.08];
     B.obox('stone', [mx, ya + 0.25, mz], [len / 2 + 0.05, 0.62, 0.28], -Math.atan2(bz - az, bx - ax), 1.4, { aoBottom: 0.65 });
+    wallColliders.push({ x: mx, z: mz, hx: len / 2 + 0.05, hz: 0.3, rot: -Math.atan2(bz - az, bx - ax) });
   }
   for (let i = 0; i < 14; i++) {
     const a = rand() * Math.PI * 2, r = 4 + rand() * 7;
@@ -147,7 +149,7 @@ export function buildChapel(B, data) {
     B.tint = [0.75 + rand() * 0.1, 0.75 + rand() * 0.1, 0.72 + rand() * 0.1];
     B.obox('slate', [gx, gy + 0.35, gz], [0.32, 0.6, 0.08], rand() * 0.3 - 0.15 + Math.PI * 0.5 * 0, 0.8, { aoBottom: 0.6 });
   }
-  return { collider: { x, z: z + 1.5, hx: W / 2 + 0.7, hz: D / 2 + T + 0.5, rot: 0 }, wallR: R };
+  return { collider: { x, z: z + 1.5, hx: W / 2 + 0.7, hz: D / 2 + T + 0.5, rot: 0 }, wallR: R, wallColliders };
 }
 
 // ---------------------------------------------------------------------------

@@ -166,6 +166,9 @@ void main() {
   alb *= 0.78 + 0.42 * nMacro;
   alb = mix(alb, alb * vec3(1.18, 1.08, 0.72), smoothstep(0.55, 0.8, nPatch) * W[0] * 0.6);
   alb = mix(alb, alb * vec3(0.8, 0.95, 0.85), smoothstep(0.45, 0.2, nPatch) * W[0] * 0.5);
+  // tussocks and mown/grazed patches in the meadows (mid scale)
+  float tuss = noise4(xz * 0.045 + 0.3).g;
+  alb *= mix(1.0, 0.82 + 0.3 * tuss, W[0] * 0.7);
   // meadow flowers seen from afar warm the grass a little
   alb = mix(alb, alb * vec3(1.15, 1.05, 1.05) + vec3(0.012, 0.008, 0.01), mA.a * 0.5);
 

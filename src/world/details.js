@@ -77,7 +77,7 @@ function rockGeometry(seed, { tall = false, flat = false } = {}) {
   const noise = createNoise2D(seed);
   const v = new THREE.Vector3();
   const ao = new Float32Array(p.count);
-  const sx = tall ? 0.55 : 0.8 + rand() * 0.5, sy = tall ? 1.0 : flat ? 0.35 : 0.5 + rand() * 0.35, sz = tall ? 0.35 : 0.7 + rand() * 0.5;
+  const sx = tall ? 0.4 : 0.8 + rand() * 0.5, sy = tall ? 1.25 : flat ? 0.35 : 0.5 + rand() * 0.35, sz = tall ? 0.27 : 0.7 + rand() * 0.5;
   for (let i = 0; i < p.count; i++) {
     v.fromBufferAttribute(p, i);
     const n = noise(v.x * 1.3 + v.z * 0.7, v.y * 1.3 - v.z * 0.4) * 0.22 + noise(v.x * 3.1, v.y * 3.1 + v.z) * 0.08 + noise(v.z * 6, v.x * 6) * 0.03;
@@ -85,7 +85,8 @@ function rockGeometry(seed, { tall = false, flat = false } = {}) {
     const r = 1 + n;
     v.multiplyScalar(r);
     v.set(v.x * sx, v.y * sy, v.z * sz);
-    if (v.y < -0.15 * sy) v.y = -0.15 * sy + (v.y + 0.15 * sy) * 0.25; // sit flat on the ground
+    if (!tall && v.y < -0.15 * sy) v.y = -0.15 * sy + (v.y + 0.15 * sy) * 0.25; // sit flat on the ground
+    if (tall) { v.x *= 1 + Math.max(0, -v.y) * 0.18; v.z *= 1 + Math.max(0, -v.y) * 0.18; }
     p.setXYZ(i, v.x, v.y, v.z);
     ao[i] = Math.min(1, Math.max(0.35, 0.7 + n * 1.6 + (v.y / sy) * 0.25));
   }
@@ -260,7 +261,7 @@ export async function createDetails(ctx) {
       if (i === 3 || i === 8) continue; // fallen gaps
       const a = (i / N) * Math.PI * 2;
       const x = cx + Math.cos(a) * 9.5, z = cz + Math.sin(a) * 9.5;
-      tallP.push({ x, y: data.heightAt(x, z) - 0.4, z, s: 1.9 + rand() * 0.9, r: -a + Math.PI / 2, tilt: (rand() - 0.5) * 0.12 });
+      tallP.push({ x, y: data.heightAt(x, z) + 0.9, z, s: 2.2 + rand() * 0.9, r: -a + Math.PI / 2, tilt: (rand() - 0.5) * 0.1 });
       colliders.push({ x, z, r: 0.9 });
     }
     // fallen stones and the altar
@@ -291,7 +292,10 @@ export async function createDetails(ctx) {
   };
   variants.forEach((g, k) => makeInst(g, placements[k], `rocks-${k}`));
   makeInst(flatV, flatP, 'rocks-flat');
-  makeInst(tallV, tallP, 'standing-stones');
+  const stonesMesh = makeInst(tallV, tallP, 'standing-stones');
+  if (stonesMesh) {
+    stonesMesh.material = new THREE.ShaderMaterial({ uniforms: { ...rockMat.uniforms, uMoss: { value: 0.45 }, uRockFlat: { value: new THREE.Vector3(0.3, 0.3, 0.27) } }, vertexShader: rockVert, fragmentShader: rockFrag });
+  }
 
   // ---- fallen logs and stumps (bark)
   const logMat = new THREE.ShaderMaterial({

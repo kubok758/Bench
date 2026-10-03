@@ -65,3 +65,10 @@ Contract revision: 1.
 - Inspection round 1 (all five styles, establish + village views) found: villagers read as mannequins up close
   (hair slab, sack disk, pale dyes, boxy torso); Painterly is muddy sepia instead of Arcane-like; Cartoon halftone
   floods everything; Ultra is milkier/flatter than Natural; grass tips too yellow; anime foliage speckled.
+- Refinement pass 1 (style language): painterly rebuilt around warm key / cool teal shadows, painted terminator,
+  brush modulation, no kernel swirl; cartoon grey-protected saturation + posterise + thicker ink; anime high-noon
+  light with diffusion bloom; Ultra moved to golden hour with ray-marched volumetric light and fog banks.
+  Measured by `verify.mjs modes`: min structural pair difference 0.135 → 0.251 (tint control 0.005).
+- Content pass: forest balance 73% → 57% with 33% open meadows (measured); rocks, standing stones, logs, stumps,
+  mushrooms, reeds, lily pads added; villager path graph fully connected (0 unreachable nodes, 12/14 walking).
+- Pages pipeline proven early: gh-pages branch push enabled GitHub Pages automatically.

@@ -4,7 +4,7 @@ import { mulberry32, smoothstep, createNoise2D } from '../core/math.js';
 import { generateBroadleaf, generateConifer, generateBush } from './treeGen.js';
 import { vegVert, leafFrag, barkFrag, vegDepthFrag, impVert, impFrag, impDepthFrag, captureFrag } from './vegShaders.js';
 import { loadTexture } from '../render/textures.js';
-import { WORLD, LANDMARKS, CLEARINGS, HOUSES } from '../world/layout.js';
+import { WORLD, LANDMARKS, CLEARINGS, HOUSES, TOUR } from '../world/layout.js';
 
 const noise = createNoise2D(404);
 
@@ -40,21 +40,24 @@ export async function createTrees(ctx, foliageAtlas) {
   const atlasMeans = foliageAtlas.userData.means;
   const regionMean = { oak: atlasMeans[0], birch: atlasMeans[2], pine: atlasMeans[3], bush: atlasMeans[0], bush2: atlasMeans[2] };
   const leafMats = [], barkMats = [], leafDepth = [], barkDepth = [];
+  const lodParams = { value: new THREE.Vector4(46, 7, 175, 18) };
+  const treeFar = { value: 175 };
+  const bushFar = { value: 130 };
   for (const v of variants) {
     const sp = SPECIES[v.kind];
     const tint = new THREE.Color(...sp.tint);
     const flat = regionMean[v.kind].clone().multiply(new THREE.Color(1, 1, 1));
-    const common = { uTreeH: { value: v.height } };
-    leafMats.push(new THREE.ShaderMaterial({
-      uniforms: { ...U, ...common, uAtlas: { value: foliageAtlas }, uLeafTint: { value: tint }, uLeafFlat: { value: new THREE.Vector3(flat.r, flat.g, flat.b) }, uAlphaRef: { value: 0.5 } },
+    const common = { uTreeH: { value: v.height }, uLodParams: lodParams, uLodFar: v.isBush ? bushFar : treeFar };
+    leafMats.push([0, 1].map((lod) => new THREE.ShaderMaterial({
+      uniforms: { ...U, ...common, uLod: { value: lod }, uAtlas: { value: foliageAtlas }, uLeafTint: { value: tint }, uLeafFlat: { value: new THREE.Vector3(flat.r, flat.g, flat.b) }, uAlphaRef: { value: 0.5 } },
       vertexShader: vegVert, fragmentShader: leafFrag, side: THREE.DoubleSide, alphaToCoverage: true,
-    }));
+    })));
     const bk = sp.bark;
     const bflat = bk === 2 ? new THREE.Vector3(0.6, 0.58, 0.52) : bk === 1 ? new THREE.Vector3(0.18, 0.12, 0.09) : new THREE.Vector3(0.16, 0.13, 0.1);
-    barkMats.push(new THREE.ShaderMaterial({
-      uniforms: { ...U, ...common, uBarkC: { value: bk === 1 ? pineC : barkC }, uBarkN: { value: bk === 1 ? pineN : barkN }, uBarkKind: { value: bk }, uBarkFlat: { value: bflat } },
+    barkMats.push([0, 1].map((lod) => new THREE.ShaderMaterial({
+      uniforms: { ...U, ...common, uLod: { value: lod }, uBarkC: { value: bk === 1 ? pineC : barkC }, uBarkN: { value: bk === 1 ? pineN : barkN }, uBarkKind: { value: bk }, uBarkFlat: { value: bflat } },
       vertexShader: vegVert, fragmentShader: barkFrag,
-    }));
+    })));
     leafDepth.push(new THREE.ShaderMaterial({
       uniforms: { ...U, ...common, uAtlas: { value: foliageAtlas }, uIsLeaf: { value: 1 } },
       vertexShader: vegVert, fragmentShader: vegDepthFrag, side: THREE.DoubleSide,
@@ -88,6 +91,8 @@ export async function createTrees(ctx, foliageAtlas) {
     if (data.maskBAt(x, z, 2) > 0.1 || data.maskBAt(x, z, 0) > 0.1) return false; // houses / fields
     if (houseClear(x, z, rClear)) return false;
     if (data.slopeAt(x, z) > 0.9) return false;
+    // keep the cinematic camera's opening frame clear of foreground crowns
+    if (TOUR.some((t, i) => Math.hypot(x - t.p[0], z - t.p[2]) < (i === 0 ? 30 : 12))) return false;
     return true;
   };
   const push = (x, z, v, scale, extra = {}) => {
@@ -100,8 +105,8 @@ export async function createTrees(ctx, foliageAtlas) {
       const x = gx + rand() * CELL, z = gz + rand() * CELL;
       const f = data.forestAt(x, z);
       let accept = rand() < f * 0.92;
-      // lone trees in open country
-      if (!accept && f < 0.05 && rand() < 0.0065) accept = true;
+      // lone trees and small copses in open country
+      if (!accept && f < 0.05 && rand() < 0.012) accept = true;
       if (!accept) continue;
       if (!okSpot(x, z, 4)) continue;
       const h = data.heightAt(x, z);
@@ -112,6 +117,26 @@ export async function createTrees(ctx, foliageAtlas) {
       if (f > 0.1 && f < 0.75 && rand() < 0.35) {
         const bx = x + (rand() - 0.5) * 4, bz = z + (rand() - 0.5) * 4;
         if (okSpot(bx, bz, 2)) push(bx, bz, 8 + (rand() < 0.5 ? 0 : 1), 0.7 + rand() * 0.6);
+      }
+    }
+  }
+  // hedgerows along the roads and lanes outside the village: bushes with the odd oak
+  for (const pf of data.pathFields) {
+    if (pf.kind === 'trail' && pf.id !== 'pond-lane') continue;
+    let gap = 0;
+    for (let k = 0; k < pf.pts.length - 1; k++) {
+      const [ax, az] = pf.pts[k], [bx, bz] = pf.pts[k + 1];
+      if (Math.hypot(ax, az) < 70) continue;
+      const nseg = noise(ax / 40 + 3, az / 40);
+      if (nseg < -0.1) { gap = 0; continue; }
+      const dx = bx - ax, dz = bz - az, l = Math.hypot(dx, dz) || 1;
+      for (const side of [-1, 1]) {
+        if (noise(ax / 60 + side * 7, az / 60) < -0.2) continue;
+        const off = pf.width * 0.5 + 2.4 + rand() * 0.6;
+        const x = ax - (dz / l) * off * side, z = az + (dx / l) * off * side;
+        if (!okSpot(x, z, 2)) continue;
+        if (++gap % 9 === 0) push(x, z, Math.floor(rand() * 3), 0.85 + rand() * 0.3);
+        else push(x, z, 8 + (rand() < 0.5 ? 0 : 1), 0.75 + rand() * 0.5);
       }
     }
   }
@@ -216,8 +241,8 @@ export async function createTrees(ctx, foliageAtlas) {
       group.add(mesh);
       meshes.push(mesh);
     };
-    mk(g.bark, barkMats[vi], barkDepth[vi]);
-    mk(g.leaves, leafMats[vi], leafDepth[vi]);
+    mk(g.bark, barkMats[vi][lod], barkDepth[vi]);
+    mk(g.leaves, leafMats[vi][lod], leafDepth[vi]);
     return { im, ia, meshes, count: 0 };
   }));
 
@@ -229,7 +254,7 @@ export async function createTrees(ctx, foliageAtlas) {
   const aImpInst = new THREE.InstancedBufferAttribute(new Float32Array(nImp * 4), 4).setUsage(THREE.DynamicDrawUsage);
   impGeo.setAttribute('aImp', aImp);
   impGeo.setAttribute('aInst', aImpInst);
-  const impUniforms = { uImpAtlas: { value: impRT.texture }, uCells: { value: new THREE.Vector2(cols, rows) }, uLeafTint: { value: new THREE.Color(1, 1, 1) } };
+  const impUniforms = { uImpAtlas: { value: impRT.texture }, uCells: { value: new THREE.Vector2(cols, rows) }, uLeafTint: { value: new THREE.Color(1, 1, 1) }, uLodParams: lodParams, uLod: { value: 2 }, uLodFar: treeFar };
   const impMat = new THREE.ShaderMaterial({ uniforms: { ...U, ...impUniforms }, vertexShader: impVert, fragmentShader: impFrag, side: THREE.DoubleSide, alphaToCoverage: true });
   const impDepth = new THREE.ShaderMaterial({ uniforms: { ...U, ...impUniforms }, vertexShader: impVert, fragmentShader: impDepthFrag, side: THREE.DoubleSide });
   const impMesh = new THREE.InstancedMesh(impGeo, impMat, nImp);
@@ -271,7 +296,12 @@ export async function createTrees(ctx, foliageAtlas) {
     lastDir.copy(dir);
     const lodK = ctx.quality?.treeLod ?? 1;
     const L0 = 46 * lodK, L1 = 175 * lodK, LB = 130 * lodK;
+    const B0 = 7, B1 = 18;
+    lodParams.value.set(L0, B0, L1, B1);
+    treeFar.value = L1;
+    bushFar.value = LB;
     const L0s = L0 * L0, L1s = L1 * L1, LBs = LB * LB;
+    const L0in = (L0 - B0) * (L0 - B0), L1in = (L1 - B1) * (L1 - B1);
     // slightly wider frustum to avoid popping at the edges while turning
     const wide = camera.clone();
     wide.fov = Math.min(camera.fov * 1.25, 120);
@@ -282,6 +312,11 @@ export async function createTrees(ctx, foliageAtlas) {
     let ni = 0;
     const cx = camera.position.x, cz = camera.position.z;
     let c0 = 0, c1 = 0;
+    const addTo = (b, i, t) => {
+      b.im.array.set(mats.subarray(i * 16, i * 16 + 16), b.count * 16);
+      b.ia.array[b.count * 4] = t.tint; b.ia.array[b.count * 4 + 1] = t.bright; b.ia.array[b.count * 4 + 2] = t.phase; b.ia.array[b.count * 4 + 3] = t.scale;
+      b.count++;
+    };
     for (let i = 0; i < N; i++) {
       const t = inst[i];
       const v = variants[t.v];
@@ -292,20 +327,10 @@ export async function createTrees(ctx, foliageAtlas) {
       sphere.radius = Math.max(v.height, v.radius * 2) * t.scale * 0.6 + 4;
       const inF = frustum.intersectsSphere(sphere);
       if (!inF && d2 > 75 * 75) continue;
-      if (d2 < L0s || (v.isBush && d2 < L1s)) {
-        const lod = d2 < L0s ? 0 : 1;
-        const b = buckets[t.v][lod];
-        b.im.array.set(mats.subarray(i * 16, i * 16 + 16), b.count * 16);
-        b.ia.array[b.count * 4] = t.tint; b.ia.array[b.count * 4 + 1] = t.bright; b.ia.array[b.count * 4 + 2] = t.phase; b.ia.array[b.count * 4 + 3] = t.scale;
-        b.count++;
-        if (lod === 0) c0++; else c1++;
-      } else if (d2 < L1s) {
-        const b = buckets[t.v][1];
-        b.im.array.set(mats.subarray(i * 16, i * 16 + 16), b.count * 16);
-        b.ia.array[b.count * 4] = t.tint; b.ia.array[b.count * 4 + 1] = t.bright; b.ia.array[b.count * 4 + 2] = t.phase; b.ia.array[b.count * 4 + 3] = t.scale;
-        b.count++;
-        c1++;
-      } else if (!v.isBush && inF && d2 < 1100 * 1100) {
+      // overlapping bands: both neighbours draw inside a band and dither between each other
+      if (d2 < L0s) { addTo(buckets[t.v][0], i, t); c0++; }
+      if (d2 >= L0in && d2 < (v.isBush ? LBs : L1s)) { addTo(buckets[t.v][1], i, t); c1++; }
+      if (!v.isBush && inF && d2 >= L1in && d2 < 1100 * 1100) {
         impMesh.instanceMatrix.array.set(mats.subarray(i * 16, i * 16 + 16), ni * 16);
         const S = impSize[impIndex.get(t.v)];
         aImp.array[ni * 4] = impIndex.get(t.v); aImp.array[ni * 4 + 1] = S; aImp.array[ni * 4 + 2] = S; aImp.array[ni * 4 + 3] = t.bright;

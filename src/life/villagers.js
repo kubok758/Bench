@@ -69,7 +69,7 @@ void main() {
       vec2 f = vFace.xy;
       float anime = uStyle == 2 ? 1.0 : 0.0;
       float toon = uStyle == 3 ? 1.0 : 0.0;
-      vec2 eyeR = mix(vec2(0.15, 0.085), vec2(0.17, 0.2), anime);
+      vec2 eyeR = mix(vec2(0.16, 0.095), vec2(0.17, 0.2), anime);
       eyeR = mix(eyeR, vec2(0.12, 0.15), toon);
       float eyeY = mix(0.06, 0.0, anime);
       for (int i = 0; i < 2; i++) {
@@ -79,7 +79,10 @@ void main() {
         float iris = ellipseMask(f, c + vec2(0.0, -0.005), eyeR * vec2(0.55, mix(0.9, 0.75, anime)), 0.15);
         float hl = ellipseMask(f, c + vec2(sx * 0.03, 0.05), eyeR * 0.22, 0.2) * max(anime, toon);
         vec3 irisCol = mix(vec3(0.08, 0.06, 0.05), vec3(0.15, 0.3, 0.55), anime);
-        alb = mix(alb, vec3(0.88, 0.86, 0.82), white * mix(0.55, 1.0, max(anime, toon)));
+        // soft socket shading around the eye, then the eye itself
+        float socket = ellipseMask(f, c + vec2(0.0, 0.03), eyeR * vec2(1.5, 2.0), 0.6);
+        alb *= 1.0 - socket * 0.18 * (1.0 - max(anime, toon));
+        alb = mix(alb, vec3(0.72, 0.7, 0.66), white * mix(0.6, 1.0, max(anime, toon)));
         alb = mix(alb, irisCol, iris);
         alb = mix(alb, vec3(1.0), hl);
         // upper lid line
@@ -89,6 +92,9 @@ void main() {
         float brow = ellipseMask(f, c + vec2(sx * 0.02, 0.23 + anime * 0.1), vec2(0.17, 0.035), 0.3);
         alb = mix(alb, uHair * 0.8, brow * 0.9);
       }
+      // shading under the nose and the lower lip
+      float under = ellipseMask(f, vec2(0.0, -0.3), vec2(0.12, 0.05), 0.8);
+      alb *= 1.0 - under * 0.12;
       float mouth = ellipseMask(f, vec2(0.0, -0.5), vec2(0.18, 0.03), 0.4);
       alb = mix(alb, vCol * vec3(0.7, 0.42, 0.4), mouth * 0.85);
       float blush = ellipseMask(f, vec2(0.0, -0.18), vec2(0.62, 0.18), 0.8) * (1.0 - ellipseMask(f, vec2(0.0, -0.2), vec2(0.25, 0.3), 0.5));

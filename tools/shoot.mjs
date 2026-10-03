@@ -13,9 +13,14 @@ export const VIEWS = {
   forest: { p: [180, 1.7, -120], t: [150, 4, -160], ground: true },
   meadow: { p: [214, 3, -20], t: [276, 10, -52], ground: true },
   mill: { p: [-96, 3, 74], t: [-142, 22, 16], ground: true },
-  stones: { p: [-190, 2.5, -160], t: [-228, 3, -205], ground: true },
+  stones: { p: [-202, 2.0, -178], t: [-228, 2.5, -205], ground: true },
+  stonesTop: { p: [-228, 70, -168], t: [-228, 20, -205] },
   mountains: { p: [40, 40, 120], t: [-60, 60, -900] },
   top: { p: [0, 1100, 1], t: [0, 0, 0] },
+  candA: { p: [190, 34, 175], t: [20, 12, -20] },
+  candB: { p: [140, 24, 90], t: [-40, 14, -30] },
+  candC: { p: [260, 64, 50], t: [-20, 12, -30] },
+  candD: { p: [30, 38, 210], t: [-30, 12, -40] },
   closeup: { p: [6, 1.7, 30], t: [4, 0.6, 24], ground: true },
   people: { p: [3.5, 1.6, 7.5], t: [-2, 1.3, 2.8], ground: true },
   well: { p: [-6, 1.5, 9], t: [-1.5, 1.2, 3], ground: true },
@@ -53,7 +58,9 @@ export async function openApp(page, url, { style = 1, timeout = 300000 } = {}) {
   u.searchParams.set('test', '1');
   u.searchParams.set('style', String(style));
   await page.goto(u.toString(), { waitUntil: 'load', timeout });
-  await page.waitForFunction(() => window.__app && (window.__app.isReady || window.__app.error), null, { timeout, polling: 500 });
+  const pageErr = new Promise((_, rej) => page.once('pageerror', (e) => rej(new Error(`pageerror: ${e.message}`))));
+  pageErr.catch(() => {});
+  await Promise.race([pageErr, page.waitForFunction(() => window.__app && (window.__app.isReady || window.__app.error), null, { timeout, polling: 500 })]);
   const err = await page.evaluate(() => window.__app.error || null);
   if (err) throw new Error(`App failed: ${err}`);
 }

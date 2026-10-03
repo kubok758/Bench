@@ -210,6 +210,7 @@ async function boot() {
     post.apply(s);
     sunMesh.material.color.setRGB(...s.sunColor);
     for (const sys of app.systems) sys.applyStyle?.(s, ctx);
+    if (app.drs?.level) app.drs.applyLevel();
     if (announce) ui.toast(s.key, s.name, s.sub);
   }
   app.setStyle = (i) => applyStyle(i);
@@ -230,14 +231,34 @@ async function boot() {
     camera.updateProjectionMatrix();
   }
   window.addEventListener('resize', resize);
+  // adaptive quality: once resolution is at its floor and frames are still long, shed the heaviest work
+  drs.level = 0;
+  drs.slowAtFloor = 0;
+  drs.applyLevel = () => {
+    const lv = drs.level;
+    const s = STYLES[app.styleIndex];
+    for (const sys of app.systems) sys.applyPerf?.(lv);
+    reflection.scale = s.quality.reflection * (lv > 0 ? 0.6 : 1);
+    const pr2 = renderer.getPixelRatio();
+    reflection.setSize(window.innerWidth * pr2, window.innerHeight * pr2);
+    shadows.configure({ size0: lv > 0 ? Math.min(1024, s.quality.shadow0) : s.quality.shadow0 });
+    post.ao.enabled = lv === 0 && s.post.ao > 0;
+  };
   drs.feed = (ms) => {
     drs.ema += (ms - drs.ema) * 0.05;
     drs.t += ms;
     if (drs.t < 1500) return;
     drs.t = 0;
     if (drs.ema > 21 && drs.idx < drs.scales.length - 1) { drs.idx++; drs.good = 0; resize(); }
-    else if (drs.ema < 13.5) { if (++drs.good >= 3 && drs.idx > 0) { drs.idx--; drs.good = 0; resize(); } }
-    else drs.good = 0;
+    else if (drs.ema < 13.5) {
+      if (++drs.good >= 3) {
+        if (drs.level > 0) { drs.level--; drs.applyLevel(); } else if (drs.idx > 0) { drs.idx--; resize(); }
+        drs.good = 0;
+      }
+    } else drs.good = 0;
+    if (drs.idx === drs.scales.length - 1 && drs.ema > 24) {
+      if (++drs.slowAtFloor >= 4 && drs.level < 1) { drs.level++; drs.slowAtFloor = 0; drs.applyLevel(); }
+    } else drs.slowAtFloor = 0;
   };
   resize();
 

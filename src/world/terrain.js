@@ -148,6 +148,13 @@ void main() {
       mean = gb;
     }
     if (i == 2) { c *= mix(vec3(1.0), vec3(0.82, 0.9, 0.75), 0.5); mean *= vec3(0.9, 0.95, 0.85); }
+    if (i == 6 && (uStyle == 2 || uStyle == 3)) {
+      // cel styles: drawn cobbles (flat greyish stones, dark joints) instead of a flat smear
+      float l = dot(a.rgb, vec3(0.3333)) / max(dot(uLayerMean[6], vec3(0.3333)), 0.02);
+      mean = mix(mean, vec3(dot(mean, vec3(0.3333))), 0.45);
+      c = mean * mix(0.6, 1.08, smoothstep(0.72, 0.9, l));
+      mean = c;
+    }
     alb += styleAlbedo(c, mean) * w;
     flatC += mean * w;
     nTs += vec3(n.xy * 2.0 - 1.0, 0.0) * w;

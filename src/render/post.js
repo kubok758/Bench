@@ -219,6 +219,7 @@ uniform vec3 uSunDirV;
 uniform vec3 uSunCol;
 uniform vec4 uVol; // x strength, y max distance, z density, w anisotropy
 uniform float uVolFrame;
+uniform float uVolJitter;
 
 vec3 viewPos(vec2 uv, float depth) {
   vec4 ndc = vec4(uv * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
@@ -242,7 +243,9 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, const in float depth,
   vec3 camW = (uCamWorld * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
   vec3 dirW = normalize((uCamWorld * vec4(dirV, 0.0)).xyz);
   const int N = 14;
-  float jitter = fract(52.9829189 * fract(dot(gl_FragCoord.xy + uVolFrame * 7.0, vec2(0.06711056, 0.00583715))));
+  // white-noise jitter: unstructured grain (an ordered dither shows up as diagonal streaks
+  // without a temporal resolve)
+  float jitter = uVolJitter > 0.5 ? fract(sin(dot(gl_FragCoord.xy + uVolFrame * 1.618, vec2(12.9898, 78.233))) * 43758.5453) : 0.5;
   float stepL = marchL / float(N);
   float acc = 0.0;
   for (int i = 0; i < N; i++) {
@@ -271,7 +274,7 @@ class VolumetricEffect extends Effect {
         ['uShadowMat0', new THREE.Uniform(new THREE.Matrix4())], ['uShadowMat1', new THREE.Uniform(new THREE.Matrix4())],
         ['uProjInv', new THREE.Uniform(new THREE.Matrix4())], ['uCamWorld', new THREE.Uniform(new THREE.Matrix4())],
         ['uSunDirV', new THREE.Uniform(new THREE.Vector3())], ['uSunCol', new THREE.Uniform(new THREE.Color())],
-        ['uVol', new THREE.Uniform(new THREE.Vector4(0, 140, 0.012, 0.65))], ['uVolFrame', new THREE.Uniform(0)],
+        ['uVol', new THREE.Uniform(new THREE.Vector4(0, 140, 0.012, 0.65))], ['uVolFrame', new THREE.Uniform(0)], ['uVolJitter', new THREE.Uniform(1)],
       ]),
     });
   }

@@ -1,0 +1,128 @@
+import * as THREE from 'three';
+import { ToneMappingMode } from 'postprocessing';
+
+// Sun: late afternoon from the west-south-west. Same sun in every style keeps the
+// composition (and the identity of the place) consistent; styles change the language.
+const sunFrom = (azDeg, elDeg) => {
+  const az = THREE.MathUtils.degToRad(azDeg), el = THREE.MathUtils.degToRad(elDeg);
+  return [Math.cos(el) * Math.cos(az), Math.sin(el), Math.cos(el) * Math.sin(az)];
+};
+
+const BASE_POST = {
+  ao: 0, aoRadius: 2.2, exposure: 1, bloom: 0.3, bloomThreshold: 0.9, godrays: 0, tone: ToneMappingMode.AGX,
+  outline: { width: 1, strength: 0, threshold: 0.08, fade: 400, color: [0.05, 0.04, 0.05], tint: 0 },
+  kuwahara: 0, contrast: 1, saturation: 1, lift: [0, 0, 0], gamma: [1, 1, 1], gain: [1, 1, 1],
+  shadowTone: [1, 1, 1], highTone: [1, 1, 1], vignette: 0.2, grain: 0, chroma: 0, paper: 0,
+  halftone: 0, hatching: 0, brush: 0, crease: 0, smaa: false, posterize: 0,
+};
+
+export const STYLES = [
+  {
+    id: 0,
+    key: '1',
+    name: 'Natural',
+    sub: 'Polished realism',
+    sun: sunFrom(152, 28),
+    sunColor: [1.0, 0.88, 0.72], sunIntensity: 3.3,
+    skyAmb: [0.36, 0.48, 0.68], skyAmbI: 0.95,
+    groundAmb: [0.32, 0.27, 0.18], groundAmbI: 0.45,
+    fog: [0.00045, 0.018, 0, 0.00022], fogTint: [1, 1, 1], sunScatter: [1.0, 0.78, 0.5],
+    sky: { zenith: [0.13, 0.29, 0.6], horizon: [0.66, 0.74, 0.82], ground: [0.38, 0.4, 0.42], glow: [1.0, 0.72, 0.42], disk: 0.99997, diskI: 30, hzExp: 3.0, detail: 1, cloudLit: [1.05, 1.0, 0.94], cloudShade: [0.5, 0.56, 0.66] },
+    cloud: { coverage: 0.48, shadow: 0.38 },
+    mat: { detail: 1, saturation: 1.02, rim: 0.4, specular: 1, bands: 3, bandSoft: 0.1, shadowTintAmt: 0, flat: 0, trans: 1, hue: 0, value: 1, toonSpec: 0 },
+    shadowTint: [0.5, 0.55, 0.75], rimColor: [1, 0.9, 0.75], lightTint: [1, 1, 1],
+    wind: 1.0,
+    post: { ...BASE_POST, ao: 2.4, exposure: 1.0, bloom: 0.32, bloomThreshold: 0.92, contrast: 1.04, saturation: 1.06, vignette: 0.22, shadowTone: [0.98, 1.0, 1.03], highTone: [1.02, 1.0, 0.97] },
+    quality: { shadow0: 2048, shadow1: 2048, r0: 64, grass: 1.0, treeLod: 1.0, reflection: 0.5 },
+  },
+  {
+    id: 1,
+    key: '2',
+    name: 'Painterly',
+    sub: 'Arcane-inspired oil & ink',
+    sun: sunFrom(152, 25),
+    sunColor: [1.0, 0.76, 0.5], sunIntensity: 3.1,
+    skyAmb: [0.34, 0.42, 0.62], skyAmbI: 0.9,
+    groundAmb: [0.42, 0.28, 0.2], groundAmbI: 0.45,
+    fog: [0.0006, 0.016, 0, 0.00028], fogTint: [1.0, 0.96, 0.95], sunScatter: [1.0, 0.62, 0.35],
+    sky: { zenith: [0.06, 0.2, 0.33], horizon: [0.95, 0.66, 0.46], ground: [0.45, 0.38, 0.36], glow: [1.25, 0.62, 0.3], disk: 0.99994, diskI: 18, hzExp: 2.4, detail: 1, cloudLit: [1.2, 0.86, 0.66], cloudShade: [0.36, 0.33, 0.52] },
+    cloud: { coverage: 0.52, shadow: 0.45 },
+    mat: { detail: 0.7, saturation: 1.18, rim: 0.9, specular: 0.4, bands: 3, bandSoft: 0.16, shadowTintAmt: 0.75, flat: 0, trans: 1.2, hue: 0, value: 1.0, toonSpec: 0 },
+    shadowTint: [0.3, 0.32, 0.62], rimColor: [1.0, 0.55, 0.3], lightTint: [1.0, 0.97, 0.9],
+    wind: 1.0,
+    post: {
+      ...BASE_POST, ao: 1.6, exposure: 1.05, bloom: 0.55, bloomThreshold: 0.7, bloomRadius: 0.8, godrays: 0.75, tone: ToneMappingMode.ACES_FILMIC,
+      outline: { width: 1.4, strength: 0.75, threshold: 0.06, fade: 260, color: [0.16, 0.07, 0.1], tint: 0.35 },
+      kuwahara: 4, contrast: 1.1, saturation: 1.14, lift: [0.03, 0.01, 0.05], gain: [1.03, 1.0, 0.95],
+      shadowTone: [0.86, 0.92, 1.18], highTone: [1.1, 1.0, 0.86], vignette: 0.42, paper: 0.9, hatching: 0.35, brush: 1.0, crease: 0.35, smaa: true,
+    },
+    quality: { shadow0: 2048, shadow1: 2048, r0: 64, grass: 0.9, treeLod: 1.0, reflection: 0.5 },
+  },
+  {
+    id: 2,
+    key: '3',
+    name: 'Anime',
+    sub: 'Cel-shaded, bright afternoon',
+    sun: sunFrom(150, 27),
+    sunColor: [1.0, 0.96, 0.88], sunIntensity: 2.7,
+    skyAmb: [0.52, 0.62, 0.86], skyAmbI: 1.0,
+    groundAmb: [0.4, 0.42, 0.36], groundAmbI: 0.6,
+    fog: [0.00035, 0.016, 0, 0.00018], fogTint: [1.0, 1.0, 1.04], sunScatter: [1.0, 0.92, 0.8],
+    sky: { zenith: [0.02, 0.18, 0.75], horizon: [0.55, 0.78, 1.0], ground: [0.55, 0.62, 0.7], glow: [1.1, 0.95, 0.75], disk: 0.9995, diskI: 6, hzExp: 2.2, detail: 1, cloudLit: [1.35, 1.35, 1.35], cloudShade: [0.62, 0.66, 0.9] },
+    cloud: { coverage: 0.5, shadow: 0.3 },
+    mat: { detail: 0.38, saturation: 1.3, rim: 0.55, specular: 1, bands: 2, bandSoft: 0.035, shadowTintAmt: 1, flat: 0.5, trans: 1, hue: 0.0, value: 1.05, toonSpec: 0.6 },
+    shadowTint: [0.5, 0.52, 0.86], rimColor: [1, 1, 1], lightTint: [1, 1, 1],
+    wind: 1.0,
+    post: {
+      ...BASE_POST, ao: 0, exposure: 1.0, bloom: 0.7, bloomThreshold: 0.62, bloomRadius: 0.85, tone: ToneMappingMode.NEUTRAL,
+      outline: { width: 1.0, strength: 0.85, threshold: 0.05, fade: 300, color: [0.1, 0.1, 0.18], tint: 1.0 },
+      contrast: 1.05, saturation: 1.18, gain: [1.0, 1.0, 1.04], vignette: 0.12, crease: 0.4, smaa: true,
+      shadowTone: [0.95, 0.97, 1.1], highTone: [1.04, 1.02, 0.98],
+    },
+    quality: { shadow0: 2048, shadow1: 2048, r0: 64, grass: 0.9, treeLod: 1.0, reflection: 0.5 },
+  },
+  {
+    id: 3,
+    key: '4',
+    name: 'Cartoon',
+    sub: 'Bold ink, flat colour',
+    sun: sunFrom(150, 32),
+    sunColor: [1.0, 0.98, 0.92], sunIntensity: 2.9,
+    skyAmb: [0.5, 0.6, 0.85], skyAmbI: 1.0,
+    groundAmb: [0.45, 0.45, 0.4], groundAmbI: 0.6,
+    fog: [0.00025, 0.016, 0, 0.00012], fogTint: [1, 1, 1], sunScatter: [1, 1, 0.9],
+    sky: { zenith: [0.1, 0.42, 0.95], horizon: [0.62, 0.86, 1.0], ground: [0.6, 0.7, 0.8], glow: [0.6, 0.5, 0.2], disk: 0.9993, diskI: 3, hzExp: 1.8, detail: 0, cloudLit: [1.3, 1.3, 1.3], cloudShade: [0.7, 0.78, 0.95] },
+    cloud: { coverage: 0.42, shadow: 0.0 },
+    mat: { detail: 0.12, saturation: 1.55, rim: 0.0, specular: 1, bands: 2, bandSoft: 0.0, shadowTintAmt: 1, flat: 1, trans: 0, hue: 0.0, value: 1.08, toonSpec: 1 },
+    shadowTint: [0.46, 0.5, 0.82], rimColor: [1, 1, 1], lightTint: [1, 1, 1],
+    wind: 1.15,
+    post: {
+      ...BASE_POST, ao: 0, exposure: 1.0, bloom: 0.15, bloomThreshold: 0.95, tone: ToneMappingMode.NEUTRAL,
+      outline: { width: 2.0, strength: 1.0, threshold: 0.04, fade: 520, color: [0.03, 0.03, 0.05], tint: 0 },
+      contrast: 1.08, saturation: 1.2, vignette: 0.0, halftone: 0.7, crease: 0.85, smaa: true, posterize: 0,
+    },
+    quality: { shadow0: 2048, shadow1: 2048, r0: 64, grass: 0.8, treeLod: 1.0, reflection: 0.5 },
+  },
+  {
+    id: 4,
+    key: '5',
+    name: 'Ultra',
+    sub: 'AAA lighting, every effect on',
+    sun: sunFrom(153, 24),
+    sunColor: [1.0, 0.83, 0.62], sunIntensity: 3.6,
+    skyAmb: [0.34, 0.45, 0.66], skyAmbI: 0.9,
+    groundAmb: [0.36, 0.28, 0.18], groundAmbI: 0.45,
+    fog: [0.0008, 0.02, 0, 0.00026], fogTint: [1.0, 0.98, 0.96], sunScatter: [1.0, 0.7, 0.42],
+    sky: { zenith: [0.1, 0.24, 0.55], horizon: [0.78, 0.74, 0.72], ground: [0.4, 0.38, 0.38], glow: [1.25, 0.7, 0.36], disk: 0.99997, diskI: 45, hzExp: 3.2, detail: 2, cloudLit: [1.15, 1.02, 0.9], cloudShade: [0.42, 0.45, 0.56] },
+    cloud: { coverage: 0.5, shadow: 0.45 },
+    mat: { detail: 1, saturation: 1.0, rim: 0.6, specular: 1.15, bands: 3, bandSoft: 0.1, shadowTintAmt: 0, flat: 0, trans: 1.3, hue: 0, value: 1, toonSpec: 0 },
+    shadowTint: [0.5, 0.55, 0.75], rimColor: [1, 0.85, 0.65], lightTint: [1, 1, 1],
+    wind: 1.0,
+    post: {
+      ...BASE_POST, ao: 3.0, aoRadius: 2.8, aoFull: true, exposure: 1.02, bloom: 0.5, bloomThreshold: 0.82, bloomRadius: 0.8, godrays: 1.0, tone: ToneMappingMode.AGX,
+      contrast: 1.08, saturation: 1.1, vignette: 0.3, grain: 0.035, chroma: 0.0035,
+      shadowTone: [0.95, 0.98, 1.06], highTone: [1.04, 1.0, 0.94], lift: [0.005, 0.005, 0.012],
+    },
+    quality: { shadow0: 4096, shadow1: 2048, r0: 80, grass: 1.5, treeLod: 1.35, reflection: 1.0 },
+  },
+];

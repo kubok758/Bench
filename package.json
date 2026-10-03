@@ -1,0 +1,21 @@
+{
+  "name": "hollowmere",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Hollowmere — a handcrafted explorable 3D valley with five real-time render styles",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "dependencies": {
+    "n8ao": "^2.0.1",
+    "postprocessing": "^6.39.5",
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "playwright": "^1.56.1",
+    "vite": "^8.3.2"
+  }
+}

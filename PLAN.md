@@ -86,3 +86,12 @@ Contract revision: 1.
   cartoon posterises value only with soft steps that fade out by 380 m, ground macro variation scaled to 30 %,
   drawn cobbles (grey stones, dark joints) in the cel styles, no violet sky sheen on wet banks; tour start kept
   clear of trees.
+- Refinement pass 4 (lighting, readability, people): diagnostic renders toggling one effect at a time traced
+  the remaining painterly artefacts — the "rain" streaks were brush strokes multiplied over volumetric haze, the
+  beige meadows were the warm rim term at grazing view angles (terrain rim 1.0 → 0.12), the blotches were hard
+  light steps on rolling ground (painterly light now lifted and half-quantised, grass blades take the ground's
+  light), the dark square was a 31 m tree shadow from a 24° sun (painterly sun → 32°). Ultra: narrower scattering
+  lobe (g 0.72) so light gathers into shafts near the sun instead of veiling the valley, sunset sun at 17°,
+  exposure 1.3; Anime moved to high noon (58°). Modes gate re-measured: min pair 0.234 → 0.275. Villagers in
+  close-up: thicker neck and higher trapezius line, raised collar, slimmer hands, talk gesture at chest height,
+  shorter stride and knee bend under long skirts (the swinging shin no longer pierces the skirt).

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Hollowmere</title>
+  <meta name="description" content="Hollowmere — a small handcrafted valley rendered in real time, with five switchable visual styles." />
+  <meta name="theme-color" content="#1d2a33" />
+  <link rel="stylesheet" href="./fonts/fonts.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M4 52 L24 22 L34 36 L44 26 L60 52 Z' fill='%234f6b4a'/%3E%3Ccircle cx='46' cy='14' r='6' fill='%23f2c879'/%3E%3C/svg%3E" />
+  <style>:root{--ink:#f4efe6;--ink-dim:#f4efe69e;--ink-faint:#f4efe661;--shade:#0c101457;--serif:"Cormorant Garamond", "Iowan Old Style", Georgia, serif;--sans:"Inter", system-ui, -apple-system, "Segoe UI", sans-serif}*{box-sizing:border-box}html,body{height:100%;color:var(--ink);background:#1d2a33;margin:0;overflow:hidden}body{font-family:var(--sans);-webkit-font-smoothing:antialiased;-webkit-user-select:none;user-select:none;touch-action:none}#app{position:fixed;inset:0}#app canvas{outline:none;width:100%;height:100%;display:block}#loader{z-index:20;background:radial-gradient(120% 90% at 50% 100%,#3a4a4a 0%,#1d2a33 55%,#121a20 100%);place-items:center;transition:opacity 1.4s,visibility 1.4s;display:grid;position:fixed;inset:0}#loader.done{opacity:0;visibility:hidden}.loader-inner{text-align:center;width:min(360px,80vw)}.title{font-family:var(--serif);letter-spacing:.04em;margin:0;font-size:clamp(42px,7vw,76px);font-weight:400;line-height:1}.subtitle{font-family:var(--serif);color:var(--ink-dim);margin:12px 0 34px;font-size:clamp(16px,2.2vw,21px);font-style:italic}.bar{background:#f4efe629;height:1px;overflow:hidden}.bar>i{background:var(--ink);width:0%;height:100%;transition:width .35s;display:block}.status{letter-spacing:.18em;text-transform:uppercase;color:var(--ink-faint);min-height:1em;margin-top:12px;font-size:11px}#intro{z-index:10;text-align:center;pointer-events:none;opacity:0;background:linear-gradient(#0a0e1200,#0a0e126b);padding:0 16px 7vh;transition:opacity 1.2s;position:fixed;bottom:0;left:0;right:0}#intro.show{opacity:1}#intro .title{text-shadow:0 2px 24px #00000059;font-size:clamp(40px,6vw,64px)}#intro .subtitle{text-shadow:0 1px 12px #0006;margin:10px 0 26px}#enter{pointer-events:auto;cursor:pointer;font:500 12px/1 var(--sans);letter-spacing:.22em;text-transform:uppercase;color:var(--ink);-webkit-backdrop-filter:blur(6px);background:#f4efe614;border:1px solid #f4efe673;border-radius:999px;padding:14px 26px;transition:background .25s,border-color .25s}#enter:hover,#enter:focus-visible{border-color:var(--ink);background:#f4efe62e;outline:none}.keys{letter-spacing:.12em;color:var(--ink-dim);text-shadow:0 1px 8px #00000080;margin-top:22px;font-size:11px}.keys b{color:var(--ink);font-weight:500}#hint{z-index:5;letter-spacing:.08em;color:var(--ink-faint);text-shadow:0 1px 6px #0000008c;pointer-events:none;opacity:0;font-size:11px;transition:opacity 1.5s;position:fixed;bottom:14px;left:16px}#hint.show{opacity:1}#toast{z-index:6;pointer-events:none;text-align:center;opacity:0;transition:opacity .45s,transform .45s;position:fixed;top:7vh;left:50%;transform:translate(-50%,-6px)}#toast.show{opacity:1;transform:translate(-50%)}#toast .n{font:500 10px/1 var(--sans);letter-spacing:.3em;color:var(--ink-dim);text-transform:uppercase;text-shadow:0 1px 8px #00000080}#toast .s{font-family:var(--serif);text-shadow:0 2px 16px #00000073;margin-top:6px;font-size:30px}#crosshair{z-index:4;opacity:0;pointer-events:none;background:#ffffff8c;border-radius:50%;width:4px;height:4px;margin:-2px 0 0 -2px;transition:opacity .6s;position:fixed;top:50%;left:50%}#crosshair.show{opacity:.6}body.hide-ui #hint,body.hide-ui #crosshair{opacity:0!important}body.test #intro,body.test #toast,body.test #hint,body.test #crosshair{display:none!important}#fail{z-index:30;text-align:center;font-family:var(--serif);background:#121a20;place-items:center;padding:24px;font-size:22px;display:none;position:fixed;inset:0}#fail.show{display:grid}@media (max-width:640px){.keys .desk{display:none}}@media (hover:hover){.keys .touch{display:none}}</style>
+  <script type="module" crossorigin src="./assets/index--yJjrTqw.js"></script>
+</head>
+<body>
+  <div id="app"></div>
+
+  <div id="loader">
+    <div class="loader-inner">
+      <h1 class="title">Hollowmere</h1>
+      <p class="subtitle">a small valley, kept by the wind</p>
+      <div class="bar"><i id="progress"></i></div>
+      <div class="status" id="status">Preparing</div>
+    </div>
+  </div>
+
+  <div id="intro">
+    <h1 class="title">Hollowmere</h1>
+    <p class="subtitle">a small valley, kept by the wind</p>
+    <button id="enter" type="button">Enter the valley</button>
+    <div class="keys">
+      <span class="desk"><b>WASD</b> walk &nbsp;·&nbsp; <b>Mouse</b> look &nbsp;·&nbsp; <b>Shift</b> run &nbsp;·&nbsp; <b>F</b> fly &nbsp;·&nbsp; </span><b>1–5</b> styles<span class="desk"> &nbsp;·&nbsp; <b>C</b> tour &nbsp;·&nbsp; <b>H</b> hide UI</span>
+      <span class="touch"> &nbsp;·&nbsp; drag to look, hold to walk</span>
+    </div>
+  </div>
+
+  <div id="hint">1–5 style · F fly · C tour · H hide</div>
+  <div id="toast"><div class="n" id="toast-n"></div><div class="s" id="toast-s"></div></div>
+  <div id="crosshair"></div>
+  <div id="fail"><div>This valley needs WebGL 2.<br /><small style="font-size:15px;opacity:.6">Try a recent Chrome, Edge, Firefox or Safari.</small></div></div>
+
+</body>
+</html>

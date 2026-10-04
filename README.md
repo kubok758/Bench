@@ -89,6 +89,17 @@ node tools/verify.mjs perf       # draw-call / triangle budgets per style, CPU u
 node tools/verify.mjs ui         # minimal visible UI while exploring
 ```
 
+Last run on the final build (headless Chromium with SwiftShader; smoke and modes also against the live Pages URL):
+
+| Check | Measured |
+| --- | --- |
+| smoke | 15 frames rendered, 0 console errors, 0 requests outside the site — locally and on GitHub Pages |
+| modes | smallest structural difference between any two styles 0.259 (threshold 0.25; a pure colour tint scores 0.005) |
+| content | 13 286 trees + 733 bushes; forest 56.5 % / open meadow 33.3 % of the valley; 15 houses, chapel, windmill, 2 bridges; 2.09 km of paths; mountains up to 609 m; 21 villagers; 24 birds |
+| life | 13 of 14 walkers moved with animated limbs within 5 s; windmill sails, birds and wind advance |
+| controls | 5.8 m walked in 2 s, eye height 1.67 m, stops at the chapel and churchyard walls, fly mode climbs 17.7 m |
+| perf | at most 269 draw calls and 8.8 M triangles in any style at the reference views; frame logic 0.2–0.3 ms median in the village. Real-GPU frame rates cannot be measured in this headless environment. |
+
 ## Performance notes
 
 Built for desktop GPUs. Instanced everything, tree impostors beyond ~175 m, camera-centred grass fields with

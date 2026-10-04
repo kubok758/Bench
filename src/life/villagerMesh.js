@@ -179,13 +179,14 @@ export function buildVillager(seed, opts = {}) {
     { y: 1.27, rx: 0.16 * sw, rz: (female ? 0.122 : 0.11) * sw, cx: 0, cz: 0.012 },
     { y: 1.35, rx: (female ? 0.165 : 0.18) * sw, rz: 0.11 * sw, cx: 0, cz: 0.005 },
     { y: 1.405, rx: (female ? 0.172 : 0.19) * sw, rz: 0.1, cx: 0, cz: -0.003 },
-    { y: 1.44, rx: female ? 0.14 : 0.15, rz: 0.085, cx: 0, cz: -0.008 },
-    { y: 1.47, rx: 0.075, rz: 0.058, cx: 0, cz: -0.006 },
+    { y: 1.44, rx: female ? 0.152 : 0.165, rz: 0.09, cx: 0, cz: -0.008 },
+    { y: 1.47, rx: female ? 0.1 : 0.11, rz: 0.07, cx: 0, cz: -0.008 },
+    { y: 1.49, rx: 0.068, rz: 0.06, cx: 0, cz: -0.004 },
   ];
   // the tunic / bodice covers the torso
   vtube(g, torso, 18, top, MAT.cloth, wTorso, { capTop: false });
   // neck
-  vtube(g, [{ y: 1.44, rx: 0.056, rz: 0.054, cx: 0, cz: 0 }, { y: 1.51, rx: 0.05, rz: 0.05, cx: 0, cz: 0.006 }, { y: 1.58, rx: 0.048, rz: 0.048, cx: 0, cz: 0.012 }], 10, skin, MAT.skin, wNeck);
+  vtube(g, [{ y: 1.46, rx: 0.062, rz: 0.06, cx: 0, cz: 0 }, { y: 1.52, rx: 0.056, rz: 0.055, cx: 0, cz: 0.006 }, { y: 1.58, rx: 0.052, rz: 0.052, cx: 0, cz: 0.012 }], 10, skin, MAT.skin, wNeck);
 
   // head with a nose, a chin, ears; face coordinates for the procedural features
   const hc = [0, 1.652, 0.014];
@@ -278,8 +279,8 @@ export function buildVillager(seed, opts = {}) {
     const upper = arm.filter((r) => r.y >= cut - 0.07);
     vtube(g, lower, 10, armCol(0, 0.9), armMat(0.9), armW(s));
     vtube(g, upper.map((r) => ({ ...r, rx: r.rx * 1.08, rz: r.rz * 1.08 })), 12, armCol(0, 1.4), armMat(1.4), armW(s), { folds: (y, a) => Math.sin(a * 5 + y * 30) * 0.04 });
-    ellipsoid(g, [sx * 0.23, 0.862, 0.016], [0.028, 0.058, 0.04], 10, 7, skin, MAT.skin, () => [[W(`hand${s}`), 1]]);
-    ellipsoid(g, [sx * 0.225, 0.88, 0.052], [0.014, 0.03, 0.014], 6, 5, skin, MAT.skin, () => [[W(`hand${s}`), 1]]);
+    ellipsoid(g, [sx * 0.23, 0.864, 0.016], [0.019, 0.055, 0.036], 10, 7, skin, MAT.skin, () => [[W(`hand${s}`), 1]]);
+    ellipsoid(g, [sx * 0.226, 0.884, 0.046], [0.011, 0.026, 0.011], 6, 5, skin, MAT.skin, () => [[W(`hand${s}`), 1]]);
     // cuff
     vtube(g, [{ y: cut - 0.025, rx: (sleeveLong ? 0.04 : 0.05), rz: (sleeveLong ? 0.04 : 0.05), cx: sx * (sleeveLong ? 0.226 : 0.212), cz: 0.008 }, { y: cut + 0.03, rx: (sleeveLong ? 0.043 : 0.054), rz: (sleeveLong ? 0.043 : 0.054), cx: sx * (sleeveLong ? 0.225 : 0.211), cz: 0.006 }], 10, top.map((v) => v * 0.78), MAT.cloth, armW(s));
   }
@@ -356,7 +357,7 @@ export function buildVillager(seed, opts = {}) {
   }
   // collar: undershirt showing at the neckline + darker hem band
   const linen = [0.5, 0.45, 0.35];
-  vtube(g, [{ y: 1.425, rx: 0.078, rz: 0.062, cx: 0, cz: 0.012 }, { y: 1.47, rx: 0.062, rz: 0.054, cx: 0, cz: 0.008 }], 14, female ? linen : top.map((v) => v * 0.7), MAT.cloth, wNeck);
+  vtube(g, [{ y: 1.465, rx: 0.088, rz: 0.07, cx: 0, cz: 0.006 }, { y: 1.505, rx: 0.07, rz: 0.064, cx: 0, cz: 0.006 }], 14, female ? linen : top.map((v) => v * 0.7), MAT.cloth, wNeck);
   // belt pouch for men, knife for some
   if (!female) {
     ellipsoid(g, [-0.13, 0.94, 0.09], [0.045, 0.055, 0.025], 8, 6, [0.28, 0.18, 0.1], MAT.leather, () => [[W('hips'), 1]]);

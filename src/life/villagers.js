@@ -293,13 +293,15 @@ export function createVillagers(ctx) {
     const ph = a.phase;
     const s = Math.sin(ph), c = Math.cos(ph);
     const t = a.t;
-    // legs
+    // legs (a long skirt shortens the stride and keeps the swinging shin inside the cloth)
+    const skirtK = a.v.female ? 0.72 : 1;
+    const kneeK = a.v.female ? 0.5 : 1;
     for (const [side, off] of [['L', 0], ['R', Math.PI]]) {
       const p = ph + off;
       const sp = Math.sin(p), cp = Math.cos(p);
-      const thigh = -0.44 * sp * w;
+      const thigh = -0.44 * sp * w * skirtK;
       const swing = Math.max(0, Math.cos(p + 0.45));
-      const knee = (0.08 + 1.05 * swing * swing * (cp > -0.2 ? 1 : 0.6) + 0.12 * Math.max(0, -sp)) * w + 0.04;
+      const knee = (0.08 + 1.05 * kneeK * swing * swing * (cp > -0.2 ? 1 : 0.6) + 0.12 * Math.max(0, -sp)) * w + 0.04;
       const foot = -(thigh + knee) * 0.92 + (sp < -0.6 ? 0.25 * (-sp - 0.6) * w : 0) - 0.04 * w;
       b[BI[`thigh${side}`]].rotation.set(thigh - 0.02, 0, 0);
       b[BI[`shin${side}`]].rotation.set(knee, 0, 0);
@@ -320,7 +322,7 @@ export function createVillagers(ctx) {
       const carrying = a.v.carry === 'basket' && side === 'L';
       const ua = b[BI[`upperArm${side}`]], fa = b[BI[`foreArm${side}`]];
       ua.rotation.set(0.34 * armS * w * (carrying ? 0.2 : 1) - (carrying ? 0.1 : 0) - (side === 'R' ? g * 0.25 * (0.5 + gest) : 0), 0, sx * (0.07 + 0.02 * breathe) + (carrying ? sx * 0.15 : 0));
-      fa.rotation.set(-(0.3 + 0.25 * Math.max(0, -armS) * w + (carrying ? 1.25 : 0) + (side === 'R' ? g * (0.9 + 0.5 * gest) : 0.1 * (1 - w))), 0, 0);
+      fa.rotation.set(-(0.3 + 0.25 * Math.max(0, -armS) * w + (carrying ? 1.25 : 0) + (side === 'R' ? g * (0.45 + 0.35 * gest) : 0.1 * (1 - w))), 0, 0);
       b[BI[`hand${side}`]].rotation.set(0.1, 0, 0);
     }
     // head: steady + glances
@@ -371,7 +373,7 @@ export function createVillagers(ctx) {
           const v = a.speed * a.walkAmt;
           a.pos.x += Math.sin(a.heading) * v * dt;
           a.pos.y += Math.cos(a.heading) * v * dt;
-          a.phase += (v / 1.42) * Math.PI * 2 * dt / Math.max(a.v.scale, 0.5);
+          a.phase += (v / (a.v.female ? 1.12 : 1.42)) * Math.PI * 2 * dt / Math.max(a.v.scale, 0.5);
         }
         // separation
         for (const o of agents) {

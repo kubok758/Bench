@@ -221,6 +221,8 @@ void main() {
   Surf s = surfDefault(alb, N);
   s.rough = clamp(rough, 0.2, 1.0);
   s.spec = 0.35;
+  // ground is seen at grazing angles: a full rim term would wash whole meadows orange
+  s.rimK = 0.12;
 #ifdef FAR
   s.spec = 0.08;
   s.rough = 0.9;

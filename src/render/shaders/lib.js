@@ -92,7 +92,7 @@ vec3 grassBase(vec2 xz) {
   float m2 = noiseLo(xz * 0.011 + 0.7);
   vec3 lush = vec3(0.074, 0.150, 0.021);
   vec3 dry = vec3(0.235, 0.215, 0.050);
-  float dryK = (uStyle == 2 || uStyle == 3) ? 0.25 : 0.7;
+  float dryK = (uStyle == 2 || uStyle == 3) ? 0.25 : (uStyle == 1 ? 0.35 : 0.7);
   vec3 c = mix(lush, dry, smoothstep(0.5, 0.78, m) * dryK);
   c *= 0.85 + 0.3 * m2;
   return c;
@@ -302,7 +302,10 @@ vec3 shade(Surf s, vec3 wp, vec3 V, float shadow) {
 
   if (uStyle == 1) {
     // Painterly (Arcane-like): soft bands, cool teal/violet shadows, warm key light, painted rim.
-    float q = bands(light, uStyleB.x, uStyleB.y);
+    // lifted before banding so low-sun lit planes land on the upper steps, not the shadow one
+    // and only half-quantised: hard steps on gently rolling ground read as camouflage blotches
+    float lift = pow(light, 0.6);
+    float q = mix(lift, bands(lift, uStyleB.x, uStyleB.y), 0.5);
     vec3 coolAmb = mix(amb, uShadowTint * (luma(amb) * 1.9 + 0.06), uStyleB.z);
     vec3 shadowCol = s.albedo * coolAmb;
     vec3 litCol = s.albedo * (sun * 1.0 + amb * 0.45);

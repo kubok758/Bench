@@ -130,12 +130,13 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, const in float depth,
   if (uFX2.z > 0.0) {
     vec2 b1 = mat2(0.94, -0.34, 0.34, 0.94) * px;
     vec2 b2 = mat2(0.77, 0.64, -0.64, 0.77) * px;
-    float st1 = texture2D(uNoise, b1 / vec2(1800.0, 320.0)).a;
-    float st2 = texture2D(uNoise, b2 / vec2(1700.0, 300.0) + 0.37).a;
+    float st1 = texture2D(uNoise, b1 / vec2(760.0, 300.0)).a;
+    float st2 = texture2D(uNoise, b2 / vec2(700.0, 280.0) + 0.37).a;
     float sel = smoothstep(0.38, 0.62, texture2D(uNoise, uv * 0.7 + 0.13).g);
     float st = mix(st1, st2, sel);
-    float skyK = 1.0 - smoothstep(1500.0, 6000.0, d) * 0.75;
-    col *= 1.0 + (st - 0.5) * 0.24 * uFX2.z * skyK;
+    // strokes show in the paint, not in the haze and sky
+    float skyK = 1.0 - smoothstep(600.0, 3000.0, d) * 0.8;
+    col *= 1.0 + (st - 0.5) * 0.12 * uFX2.z * skyK;
   }
 
   // ---- grading
@@ -308,8 +309,8 @@ export class PostChain {
     this.exposure = new ExposureEffect();
     this.bloom = new BloomEffect({ intensity: 0.4, luminanceThreshold: 0.85, luminanceSmoothing: 0.25, mipmapBlur: true, radius: 0.72 });
     this.godrays = new GodRaysEffect(camera, sunMesh, {
-      resolutionScale: 0.5, density: 0.95, decay: 0.93, weight: 0.32, exposure: 0.42, samples: 48, clampMax: 1.0,
-      kernelSize: KernelSize.SMALL, blur: true,
+      resolutionScale: 0.5, density: 0.95, decay: 0.93, weight: 0.32, exposure: 0.42, samples: 64, clampMax: 1.0,
+      kernelSize: KernelSize.LARGE, blur: true,
     });
     this.godrays.blendMode.opacity.value = 0;
     this.tone = new ToneMappingEffect({ mode: ToneMappingMode.AGX });

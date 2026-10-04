@@ -111,6 +111,8 @@ void main() {
   vec3 flatC = vCol * 0.95;
   alb = styleAlbedo(alb, mix(flatC, flatC * 1.25, step(0.55, vT) * 0.0 + vT * 0.35));
   vec3 N = normalize(vN);
+  // painterly light is banded: blades must take the ground's light or gaps in the sward flash bright
+  if (uStyle == 1) N = normalize(N + vec3(0.0, 2.0, 0.0));
   vec3 V = normalize(cameraPosition - vWp);
   Surf s = surfDefault(alb, N);
   s.ao = mix(0.35, 1.0, smoothstep(0.0, 0.7, vT));

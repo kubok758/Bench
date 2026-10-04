@@ -75,6 +75,12 @@ vec3 styleAlbedo(vec3 detailed, vec3 flatCol) {
   float mx = max(c.r, max(c.g, c.b)), mn = min(c.r, min(c.g, c.b));
   float chroma = (mx - mn) / max(mx, 1e-4);
   float k = mix(1.0 + (uStyleA.y - 1.0) * 0.25, uStyleA.y, smoothstep(0.12, 0.45, chroma));
+  // earthy oranges and browns (dirt, wood, thatch) take only part of the boost, or they turn traffic-cone orange
+  if (k > 1.0) {
+    float hue = rgb2hsv(c).x;
+    float earthy = smoothstep(0.0, 0.03, hue) * (1.0 - smoothstep(0.11, 0.14, hue));
+    k = mix(k, 1.0 + (k - 1.0) * 0.3, earthy);
+  }
   c = adjustSat(c, k);
   if (uStyleC.y != 0.0) {
     vec3 h = rgb2hsv(c);
@@ -319,7 +325,7 @@ vec3 shade(Surf s, vec3 wp, vec3 V, float shadow) {
     // Anime: crisp two-tone cel with coloured shadow, soft gradient inside the lit side.
     float far = smoothstep(150.0, 900.0, length(wp - cameraPosition));
     float q = smoothstep(0.5 - uStyleB.y - far * 0.35, 0.5 + uStyleB.y + far * 0.35, light + 0.12);
-    vec3 shadowCol = s.albedo * uShadowTint * (0.5 + 0.38 * luma(amb));
+    vec3 shadowCol = s.albedo * uShadowTint * (0.62 + 0.38 * luma(amb));
     vec3 litCol = s.albedo * (sun * (0.82 + 0.22 * ndl) + amb * 0.3);
     col = mix(shadowCol, litCol, q);
     col *= mix(1.0, s.ao, 0.55);

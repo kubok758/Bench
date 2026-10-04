@@ -95,3 +95,11 @@ Contract revision: 1.
   exposure 1.3; Anime moved to high noon (58°). Modes gate re-measured: min pair 0.234 → 0.275. Villagers in
   close-up: thicker neck and higher trapezius line, raised collar, slimmer hands, talk gesture at chest height,
   shorter stride and knee bend under long skirts (the swinging shin no longer pierces the skirt).
+- Refinement pass 5 (final inspection, every style × six views incl. people and ground close-ups —
+  docs/inspection/final-style-1..5.jpg): Natural, Painterly and Ultra found clean. Anime and Cartoon: dirt and
+  worn ground boosted to traffic-cone orange → earthy hues (dirt, wood, thatch) now take 30 % of the saturation
+  boost; anime cel shadows on steep banks read as holes → shadow floor 0.5 → 0.62
+  (docs/inspection/after-fix-style-2..4.jpg). A pollen mote close to the camera showed as a 15 px square in the sky
+  → motes are now soft round specks. Walk cycle checked frame by frame (docs/inspection/walk-cycle.jpg).
+- Shipping: tools/browser-trust.mjs lets headless Chromium trust the same extra CAs as Node (needed behind the
+  sandbox's TLS-intercepting proxy) instead of ignoring TLS errors; live Pages smoke and modes checks pass.

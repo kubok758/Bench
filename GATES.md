@@ -59,14 +59,14 @@ Scope: a polished real-time 3D nature valley with a village, forest, water, dist
   EXPECT: GIT OK
   EVIDENCE: pending
 
-- [ ] M1: every style was inspected from several viewpoints and the weak areas found were fixed
-  EVIDENCE: pending
+- [x] M1: every style was inspected from several viewpoints and the weak areas found were fixed
+  EVIDENCE: 5 inspection passes over all five styles (valley ×2, standing stones, square, people, ground close-up) logged in PLAN.md with the defect found and the fix; final sheets docs/inspection/final-style-1..5.jpg and post-fix sheets docs/inspection/after-fix-style-2..4.jpg; defects traced with one-effect-at-a-time diagnostic renders (painterly swirls, streaks, beige wash, blotches; cartoon camouflage; ultra veil; sky square).
 
-- [ ] M2: at least three refinement passes spent purely on visual quality, density, lighting, animation and style consistency, each logged with concrete changes
-  EVIDENCE: pending
+- [x] M2: at least three refinement passes spent purely on visual quality, density, lighting, animation and style consistency, each logged with concrete changes
+  EVIDENCE: PLAN.md status log lists refinement passes 1-5 (style language; density/detail/motion; style consistency; lighting/readability/people; final inspection), each with concrete changes and measured numbers (e.g. modes min pair 0.135 -> 0.251 -> 0.275, 0.259 after the final Ultra haze reduction; forest 73% -> 57% with 33% open).
 
-- [ ] M3: ground close-ups show no obvious texture tiling and no empty or dead-looking areas
-  EVIDENCE: pending
+- [x] M3: ground close-ups show no obvious texture tiling and no empty or dead-looking areas
+  EVIDENCE: closeup and square views in docs/inspection/final-style-1..5.jpg: cobbles, path dirt, worn grass and meadow show no repeat pattern (two-sample anti-tiling + macro variation in src/world/terrain.js); measured inventory (verify content): 300k grass blades, 26k flowers, 5.2k ferns, 36k wheat stalks, 937 rocks, 140 logs, 160 stumps, 13,286 trees + 733 bushes, forest 56.5% / open 33.3%.
 
-- [ ] M4: villagers read as people (proportions, clothing, hair) with a natural walk, inspected in close-up
-  EVIDENCE: pending
+- [x] M4: villagers read as people (proportions, clothing, hair) with a natural walk, inspected in close-up
+  EVIDENCE: people/portrait/vendor close-ups (people views in docs/inspection/final-style-*.jpg) show clothing, hair, kerchiefs, faces with eyes/nose shading; neck, shoulders and hands corrected in pass 4; docs/inspection/walk-cycle.jpg shows 8 frames of a walk with arm swing, hip sway and the skirt following the legs (no shin through the skirt); verify life: 13 of 14 walkers moved and animated in 5 s.

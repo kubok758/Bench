@@ -182,7 +182,9 @@ attribute vec4 aMote;
 uniform vec3 uCenter;
 varying float vA;
 varying vec3 vWp;
+varying vec2 vQ;
 void main() {
+  vQ = position.xy * 2.0;
   float R = 14.0;
   vec3 o = aMote.xyz * 2.0 * R;
   o += vec3(sin(uTime * 0.13 + aMote.w * 20.0), sin(uTime * 0.21 + aMote.w * 11.0) * 0.6, cos(uTime * 0.17 + aMote.w * 7.0)) * 1.5;
@@ -208,8 +210,12 @@ const moteFrag = /* glsl */ `
 ${commonPars}
 varying float vA;
 varying vec3 vWp;
+varying vec2 vQ;
 void main() {
-  vec3 c = uSunColor * 0.35 * vA;
+  // soft round speck, not a quad
+  float r = length(vQ);
+  float k = 1.0 - smoothstep(0.2, 1.0, r);
+  vec3 c = uSunColor * 0.35 * vA * k * k;
   gl_FragColor = vec4(c, 1.0);
 }
 `;

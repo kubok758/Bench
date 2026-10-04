@@ -44,10 +44,10 @@ Scope: a polished real-time 3D nature valley with a village, forest, water, dist
   EXPECT: PERF OK
   EVIDENCE: automatic-evidence=v1; definition-sha256=94533161eb32097431ba330f2e303de5cf7c8d7e83a0ba6630bffb7ad712d1ed; exit=0; EXPECT=matched; output-sha256=709f0eb3ad27c246ba14250a93ff38dcf7488ddbf4572a2a501a9645f851507f; output-bytes=1082; shell=/bin/sh; cwd=/home/user/Bench; path=7f4fb4b02918/15 entries
 
-- [x] G8: the UI stays minimal once exploring (little visible text, nothing large covering the view)
+- [ ] G8: the UI stays minimal: on desktop no touch controls appear and the visible UI while exploring stays under 80 characters and 5% of the screen; on an emulated phone the touch controls cover at most 12% of the screen, stay inside the viewport and do not overlap each other
   CHECK: node tools/verify.mjs ui
   EXPECT: UI OK
-  EVIDENCE: automatic-evidence=v1; definition-sha256=2de2ca626f1e212e6173fb05779ea948ba56529cd48b23700bf93adb13c6679c; exit=0; EXPECT=matched; output-sha256=e06537f35a0c632d5a1f3950e5f7f8c097be15c2c27a03c1bc18987a8bb7083b; output-bytes=54; shell=/bin/sh; cwd=/home/user/Bench; path=7f4fb4b02918/15 entries
+  EVIDENCE: pending
 
 - [x] G9: the live GitHub Pages site boots to a rendered world with zero errors
   CHECK: node tools/verify.mjs smoke --url https://kubok758.github.io/Bench/
@@ -58,6 +58,21 @@ Scope: a polished real-time 3D nature valley with a village, forest, water, dist
   CHECK: node tools/check-git.mjs claude/3d-village-explorer-4t3hto
   EXPECT: GIT OK
   EVIDENCE: automatic-evidence=v1; definition-sha256=e7501e1078d117a9c844b4ac1d10f6ec98700b91cca702584b782656a950ebfb; exit=0; EXPECT=matched; output-sha256=5e85b0f0b31d3fb420a31a6a823c42d531669f2a9dd692dde2a3e9cf3c6b9249; output-bytes=42; shell=/bin/sh; cwd=/home/user/Bench; path=7f4fb4b02918/15 entries
+
+- [ ] G11: on an emulated phone (portrait and landscape) the on-screen joystick moves the walker, a look drag turns the camera, both work together with two fingers, touches on buttons neither move nor turn the camera, and on-screen buttons switch all five styles, jump, toggle fly and fly up and down
+  CHECK: node tools/verify.mjs touch
+  EXPECT: TOUCH OK
+  EVIDENCE: pending
+
+- [ ] G12: the fullscreen button enters and leaves fullscreen on desktop and on an emulated phone, and its pressed state follows the browser's fullscreen state (including leaving fullscreen by the browser)
+  CHECK: node tools/verify.mjs fullscreen
+  EXPECT: FULLSCREEN OK
+  EVIDENCE: pending
+
+- [ ] G13: the live GitHub Pages site passes the touch and fullscreen checks
+  CHECK: node tools/verify.mjs touch --url https://kubok758.github.io/Bench/ && node tools/verify.mjs fullscreen --url https://kubok758.github.io/Bench/
+  EXPECT: FULLSCREEN OK
+  EVIDENCE: pending
 
 - [x] M1: every style was inspected from several viewpoints and the weak areas found were fixed
   EVIDENCE: 5 inspection passes over all five styles (valley ×2, standing stones, square, people, ground close-up) logged in PLAN.md with the defect found and the fix; final sheets docs/inspection/final-style-1..5.jpg and post-fix sheets docs/inspection/after-fix-style-2..4.jpg; defects traced with one-effect-at-a-time diagnostic renders (painterly swirls, streaks, beige wash, blotches; cartoon camouflage; ultra veil; sky square).
@@ -70,3 +85,6 @@ Scope: a polished real-time 3D nature valley with a village, forest, water, dist
 
 - [x] M4: villagers read as people (proportions, clothing, hair) with a natural walk, inspected in close-up
   EVIDENCE: people/portrait/vendor close-ups (people views in docs/inspection/final-style-*.jpg) show clothing, hair, kerchiefs, faces with eyes/nose shading; neck, shoulders and hands corrected in pass 4; docs/inspection/walk-cycle.jpg shows 8 frames of a walk with arm swing, hip sway and the skirt following the legs (no shin through the skirt); verify life: 13 of 14 walkers moved and animated in 5 s.
+
+- [ ] M5: the phone layout was inspected in portrait and landscape screenshots in at least two styles: controls are legible, compact, consistent with the visual language and do not hide the scene
+  EVIDENCE: pending

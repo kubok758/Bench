@@ -22,7 +22,7 @@ no subagent fan-out was requested, so the "sequential fallback" launch mode is u
 
 ## Current contract inventory
 
-Contract revision: 1.
+Contract revision: 2 (follow-up request: phone touch controls + fullscreen).
 
 | ID | Required outcome or constraint | Owner | Observing gate |
 |---|---|---|---|
@@ -46,6 +46,9 @@ Contract revision: 1.
 | C18 | Repeated visual inspection of every mode + several polish passes | 1.6 | M1, M2 |
 | C19 | Live on GitHub Pages, verified working | 1.7 | G9 |
 | C20 | Work committed and pushed to `claude/3d-village-explorer-4t3hto` | 1.7 | G10 |
+| C21 | Touch controls on phones: move, look, jump/fly, switch the five styles, tour — all without a keyboard | 1.8 | G11, G13, M5 |
+| C22 | A fullscreen option (desktop and phones; graceful where the browser cannot) | 1.8 | G12, G13, M5 |
+| C23 | Desktop stays as minimal as before; phone controls stay compact and inside the safe area | 1.8 | G8, M5 |
 
 ## Tree
 
@@ -57,6 +60,8 @@ Contract revision: 1.
   - 1.5 Life: villagers (skinned, procedural walk), birds, smoke, insects, falling leaves
   - 1.6 Styles: five render modes + visual refinement passes
   - 1.7 Ship: build, verification harness, GitHub Pages deploy, live verification
+  - 1.8 Mobile: touch control layer (joystick, look, buttons, style picker), fullscreen, phone defaults,
+    touch/fullscreen verification gates
 
 ## Status log
 
@@ -103,3 +108,6 @@ Contract revision: 1.
   → motes are now soft round specks. Walk cycle checked frame by frame (docs/inspection/walk-cycle.jpg).
 - Shipping: tools/browser-trust.mjs lets headless Chromium trust the same extra CAs as Node (needed behind the
   sandbox's TLS-intercepting proxy) instead of ignoring TLS errors; live Pages smoke and modes checks pass.
+- Follow-up request (contract revision 2): phone touch controls and a fullscreen option. Gates G11–G13 and M5
+  written before any code; G8 widened to cover the phone layout. Design inputs gathered by a research/design
+  workflow (mobile browser constraints, control scheme, emulated multi-touch test harness).

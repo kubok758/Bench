@@ -2,6 +2,7 @@
 //   node tools/verify.mjs <smoke|modes|content|life|controls|perf|ui> [--url URL]
 // Without --url the production build in dist/ is served locally.
 import { chromium } from 'playwright';
+import { trustArgs } from './browser-trust.mjs';
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -36,7 +37,7 @@ function serveDist() {
 }
 
 async function launch(width = 1024, height = 576) {
-  const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-sandbox'] });
+  const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-sandbox', ...trustArgs()] });
   const context = await browser.newContext({ viewport: { width, height } });
   const page = await context.newPage();
   page.setDefaultTimeout(900000);

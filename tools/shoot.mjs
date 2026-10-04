@@ -1,5 +1,6 @@
 // Screenshot helper: node tools/shoot.mjs --url http://localhost:5173/ --views establish,village --styles 1,2 --out shots
 import { chromium } from 'playwright';
+import { trustArgs } from './browser-trust.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -42,9 +43,9 @@ export function parseArgs(argv) {
 
 export async function launch({ width = 1280, height = 720 } = {}) {
   const browser = await chromium.launch({
-    args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-sandbox'],
+    args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-sandbox', ...trustArgs()],
   });
-  const context = await browser.newContext({ viewport: { width, height }, ignoreHTTPSErrors: true });
+  const context = await browser.newContext({ viewport: { width, height } });
   const page = await context.newPage();
   page.setDefaultTimeout(600000);
   const logs = [];

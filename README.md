@@ -29,15 +29,20 @@ travelling gusts of wind.
 ## The five styles
 
 All five render the same world, same geometry and the same simulation. A style switch only changes shared
-shader uniforms and post-processing parameters — nothing is recompiled at runtime.
+shader uniforms and post-processing parameters — nothing is recompiled at runtime. Each style also has its own
+light design (time of day, key/fill balance, shadow colour), the way an art director would light the same set.
+
+| 1 Natural | 2 Painterly | 3 Anime | 4 Cartoon | 5 Ultra |
+| --- | --- | --- | --- | --- |
+| ![Natural](docs/shots/style-1.jpg) | ![Painterly](docs/shots/style-2.jpg) | ![Anime](docs/shots/style-3.jpg) | ![Cartoon](docs/shots/style-4.jpg) | ![Ultra](docs/shots/style-5.jpg) |
 
 | Key | Style | What changes |
 | --- | --- | --- |
 | **1** | **Natural** | Physically based shading, clear afternoon sun, soft cascaded shadows, SSAO, aerial perspective, planar water reflections, AgX tone mapping. |
-| **2** | **Painterly** | Arcane-inspired: banded light with cool teal/violet shadows and a warm key light, painted terminator accents, warm rim light, Kuwahara oil-paint filter, brush-stroke modulation, wobbling ink lines, canvas grain, light shafts, filmic grade. |
+| **2** | **Painterly** | Arcane-inspired: lifted, half-banded light with cool teal shadows and a warm key light, painted terminator accents, warm rim light, 8-sector Kuwahara oil-paint filter, short directional brush strokes, wobbling ink lines, canvas grain, light shafts, filmic grade. |
 | **3** | **Anime** | High noon cel shading with tinted shadows, crisp two-tone clouds, anime eyes on the villagers, colour-matched line art, soft "light diffusion" bloom, simplified flat textures, chunkier grass. |
-| **4** | **Cartoon** | Flat posterised colour with grey-protected saturation boost, hard two-tone light, thick black ink outlines, inked cartoon clouds, halftone in the deepest shadows, stylised water. |
-| **5** | **Ultra** | Golden hour: low sun, ray-marched volumetric light through the shadow maps (shafts through foliage in any view), drifting fog banks, 4096² shadow cascade with 16-tap soft filtering, full-resolution AO, higher grass density and tree LOD distances, full-resolution reflections, caustics, cirrus layer, god rays, filmic grade, grain and lens touches. |
+| **4** | **Cartoon** | Flat colour with soft value-only posterisation and grey-protected saturation, hard two-tone light, thick black ink outlines, inked cartoon clouds, drawn cobblestones, halftone in the deepest shadows, stylised water. |
+| **5** | **Ultra** | Sunset: low sun, ray-marched volumetric light through the shadow maps (shafts through foliage and haze around the sun), drifting fog banks, 4096² shadow cascade with 16-tap soft filtering, full-resolution AO, higher grass density and tree LOD distances, full-resolution reflections, caustics, cirrus layer, god rays, filmic grade, grain and lens touches. |
 
 ## What is in the world
 
@@ -49,14 +54,15 @@ shader uniforms and post-processing parameters — nothing is recompiled at runt
   shore foam, sun glints and planar reflections; reeds, lily pads and a moored boat.
 * **Vegetation** — procedurally grown oaks, birches, spruces and bushes with leaf-cluster atlases painted from real
   leaf scans, three LODs (full, simplified, baked impostor billboards), layered wind (trunk bend, branch sway,
-  leaf flutter, travelling gusts), translucency; ~450 k grass blades in three camera-following fields, wild flowers,
-  ferns, wheat fields, rocks, fallen logs, stumps and mushrooms.
+  leaf flutter, travelling gusts), translucency; about 13 000 trees and 700 bushes; 300 k grass blades (450 k in Ultra) in three camera-following
+  fields, 26 k wild flowers, ferns, 36 k wheat stalks, rocks, fallen logs, stumps and mushrooms.
 * **Village** — fifteen stone and half-timbered houses (jettied upper floors, framing and braces, thatch or slate
   roofs, chimneys, shuttered windows with flower boxes), a chapel with a bell tower and churchyard, a windmill with
   turning sails, a well, a market stall, fences, carts, hay bales, laundry lines, lanterns; a stone arch bridge
   and a timber footbridge.
-* **Life** — 21 villagers built procedurally (skinned meshes, clothing, hair, beards, faces) with a procedural walk
-  cycle, walking a path graph between places in the village and out to the meadows; flocks of birds, chimney smoke,
+* **Life** — 21 villagers built procedurally (skinned meshes, clothing, hair, beards, faces), 14 of them walking a
+  connected path graph between places in the village and out to the meadows with a procedural, skirt-aware walk
+  cycle, the rest chatting by the well or tending the stall; flocks of birds, chimney smoke,
   butterflies, sunlit pollen motes, falling leaves.
 
 ## Running locally
